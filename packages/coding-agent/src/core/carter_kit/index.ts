@@ -1,14 +1,7 @@
 /**
- * DCP — Dynamic Compaction Protocol
+ * Carter Kit — Context management, handles, CoT persistence
  *
  * Re-exports for the public API.
- *
- * module DCP
- *   ( module DCP.Types
- *   , module DCP.Store
- *   , module DCP.Interceptor
- *   , module DCP.Runtime
- *   ) where
  */
 
 // Interceptor
@@ -18,7 +11,7 @@ export { captureCoT, captureResult, decideIntercept, execHandleOp } from "./inte
 export type { DcpRuntime, PushDownToolDef, ToolCallIntercept } from "./runtime.js";
 export {
 	COT_REPLAY_TOOL,
-	DCP_SYSTEM_PROMPT,
+	HANDLE_TOOLS_PROMPT,
 	enrichCompactionInput,
 	initRuntime,
 	interceptToolCall,
@@ -29,8 +22,8 @@ export {
 	shutdownRuntime,
 } from "./runtime.js";
 // Session hook
-export type { DcpHook } from "./session-hook.js";
-export { createDcpHook } from "./session-hook.js";
+export type { CarterKitHook } from "./session-hook.js";
+export { createCarterKitHook } from "./session-hook.js";
 // Store
 export type { Store } from "./store.js";
 export {

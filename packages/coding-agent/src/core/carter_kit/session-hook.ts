@@ -5,10 +5,10 @@
  * provides hook functions that get called from strategic points
  * in the agent lifecycle.
  *
- * The session creates a DcpHook, then calls its methods at the
+ * The session creates a CarterKitHook, then calls its methods at the
  * appropriate lifecycle points. Minimal coupling.
  *
- * data DcpHook = DcpHook
+ * data CarterKitHook = CarterKitHook
  *   { hookRuntime :: DcpRuntime
  *   , hookOnToolCall :: Text -> Value -> IO (Maybe Text)  -- intercept
  *   , hookOnToolResult :: Text -> Text -> IO Text          -- capture
@@ -24,7 +24,7 @@ import { Type } from "@sinclair/typebox";
 import type { DcpRuntime, PushDownToolDef } from "./runtime.js";
 import {
 	COT_REPLAY_TOOL,
-	DCP_SYSTEM_PROMPT,
+	HANDLE_TOOLS_PROMPT,
 	enrichCompactionInput,
 	initRuntime,
 	interceptToolCall,
@@ -40,7 +40,7 @@ import type { HandleId } from "./types.js";
 // Hook state
 // ============================================================================
 
-export interface DcpHook {
+export interface CarterKitHook {
 	readonly runtime: DcpRuntime;
 
 	/**
@@ -98,7 +98,7 @@ export interface DcpHook {
 // Create hook
 // ============================================================================
 
-export function createDcpHook(storePath: string | undefined, sessionId: string): DcpHook {
+export function createCarterKitHook(storePath: string | undefined, sessionId: string): CarterKitHook {
 	const rt = initRuntime(storePath, sessionId);
 
 	return {
@@ -129,7 +129,7 @@ export function createDcpHook(storePath: string | undefined, sessionId: string):
 		},
 
 		systemPromptAddition(contextTokens: number, contextWindow: number) {
-			const parts: string[] = [DCP_SYSTEM_PROMPT];
+			const parts: string[] = [HANDLE_TOOLS_PROMPT];
 			const warning = pressureWarning(contextTokens, contextWindow);
 			if (warning) parts.push(warning);
 			return parts.join("\n\n");

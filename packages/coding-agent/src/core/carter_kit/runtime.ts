@@ -22,10 +22,19 @@
 import type { AgentMessage } from "@punkin-pi/agent-core";
 import type { AssistantMessage } from "@punkin-pi/ai";
 import { captureCoT, captureResult, decideIntercept, execHandleOp, type HandleOp } from "./interceptor.js";
+import { loadTemplate } from "./prompts/loader.js";
 import type { Store } from "./store.js";
 import { closeStore, getBlobContent, openStore } from "./store.js";
 import type { HandleId } from "./types.js";
 import { pressureLevel } from "./types.js";
+
+// ============================================================================
+// Template hashes - update these when template content changes
+// ============================================================================
+const HANDLE_TOOLS_HASH = "ee345e32ddd8";
+const PRESSURE_MEDIUM_HASH = "e0cb18e0fb89";
+const PRESSURE_HIGH_HASH = "b3c3503d588d";
+const PRESSURE_CRITICAL_HASH = "10f72385b77e";
 
 // ============================================================================
 // Runtime state
@@ -159,34 +168,12 @@ export function pressureWarning(contextTokens: number, contextWindow: number): s
 	switch (pressure) {
 		case "Low":
 			return undefined;
-
 		case "Medium":
-			return [
-				'<dcp_pressure level="medium">',
-				"Context is 50-75% full. Prefer concise responses.",
-				"Use handle_grep/handle_lines instead of reading full files when possible.",
-				"</dcp_pressure>",
-			].join("\n");
-
+			return loadTemplate("pressure-medium.md", PRESSURE_MEDIUM_HASH).trim();
 		case "High":
-			return [
-				'<dcp_pressure level="high">',
-				"Context is 75-90% full. Be very concise.",
-				"Do NOT read large files — use handle_grep and handle_lines for targeted access.",
-				"Minimize tool output. Ask for specific lines, not whole files.",
-				"Compaction will trigger soon.",
-				"</dcp_pressure>",
-			].join("\n");
-
+			return loadTemplate("pressure-high.md", PRESSURE_HIGH_HASH).trim();
 		case "Critical":
-			return [
-				'<dcp_pressure level="critical">',
-				"Context is >90% full. CRITICAL pressure.",
-				"Use handles exclusively. Do not materialize large results.",
-				"Every token counts. Maximum concision.",
-				"Compaction is imminent.",
-				"</dcp_pressure>",
-			].join("\n");
+			return loadTemplate("pressure-critical.md", PRESSURE_CRITICAL_HASH).trim();
 	}
 }
 
@@ -198,27 +185,8 @@ export function pressureWarning(contextTokens: number, contextWindow: number): s
  * The DCP system prompt block. Injected once on session start.
  * Teaches the model about handles and the push-down DSL.
  */
-export const DCP_SYSTEM_PROMPT = `
-## Tool Result Handles (DCP)
-
-Large tool results may be replaced with **handles** — compact references to stored data.
-A handle looks like: [Handle §h7: read result, 2500 tokens, 847 lines]
-
-When you see a handle, use these tools to access the data surgically:
-
-- handle_lines("§h7", 40, 60) — read lines 40-60
-- handle_grep("§h7", "pattern") — search for matches
-- handle_head("§h7", 20) — first 20 lines
-- handle_tail("§h7", 20) — last 20 lines
-- handle_count("§h7") — count lines
-- handle_count_matches("§h7", "pattern") — count matching lines
-- handle_slice("§h7", offset, length) — read a byte range
-
-This avoids flooding context with large outputs. Read what you need, not everything.
-
-When context pressure warnings appear (<dcp_pressure>), be extra concise and prefer
-handle operations over full materialization.
-`.trim();
+// Loaded from prompts/handle-tools.md with hash verification
+export const HANDLE_TOOLS_PROMPT = loadTemplate("handle-tools.md", HANDLE_TOOLS_HASH).trim();
 
 // ============================================================================
 // Push-down DSL tool definitions
