@@ -78,21 +78,45 @@ import { createWriteTool, writeTool } from "./write.js";
 /** Tool type (AgentTool from pi-ai) */
 export type Tool = AgentTool<any>;
 
-// Default tools for full access mode (using process.cwd())
-export const codingTools: Tool[] = [readTool, bashTool, editTool, writeTool];
+// ============================================================================
+// Tool Sets by Capability
+// ============================================================================
 
-// Read-only tools for exploration without modification (using process.cwd())
-export const readOnlyTools: Tool[] = [readTool, grepTool, findTool, lsTool];
+/** Tools for reading/exploring (no side effects) */
+export const readToolset: Tool[] = [readTool, grepTool, findTool, lsTool];
 
-// All available tools (using process.cwd())
+/** Tools for writing/modifying files */
+export const writeToolset: Tool[] = [editTool, writeTool];
+
+/** Tools for executing commands */
+export const executeToolset: Tool[] = [bashTool];
+
+// ============================================================================
+// Tool Modes (composed from toolsets)
+// ============================================================================
+
+/** Read-only mode: exploration without modification */
+export const readOnlyTools: Tool[] = [...readToolset];
+
+/** Coding mode: read + write + execute (strict superset of readOnly) */
+export const codingTools: Tool[] = [...readToolset, ...writeToolset, ...executeToolset];
+
+// ============================================================================
+// Tool Registry
+// ============================================================================
+
+/** All available tools by name */
 export const allTools = {
+	// Read toolset
 	read: readTool,
-	bash: bashTool,
-	edit: editTool,
-	write: writeTool,
 	grep: grepTool,
 	find: findTool,
 	ls: lsTool,
+	// Write toolset
+	edit: editTool,
+	write: writeTool,
+	// Execute toolset
+	bash: bashTool,
 };
 
 export type ToolName = keyof typeof allTools;
@@ -104,36 +128,51 @@ export interface ToolsOptions {
 	bash?: BashToolOptions;
 }
 
-/**
- * Create coding tools configured for a specific working directory.
- */
-export function createCodingTools(cwd: string, options?: ToolsOptions): Tool[] {
-	return [
-		createReadTool(cwd, options?.read),
-		createBashTool(cwd, options?.bash),
-		createEditTool(cwd),
-		createWriteTool(cwd),
-	];
-}
+// ============================================================================
+// Tool Factories (for custom cwd)
+// ============================================================================
 
-/**
- * Create read-only tools configured for a specific working directory.
- */
-export function createReadOnlyTools(cwd: string, options?: ToolsOptions): Tool[] {
+/** Create read toolset for a specific working directory */
+export function createReadToolset(cwd: string, options?: ToolsOptions): Tool[] {
 	return [createReadTool(cwd, options?.read), createGrepTool(cwd), createFindTool(cwd), createLsTool(cwd)];
 }
 
-/**
- * Create all tools configured for a specific working directory.
- */
+/** Create write toolset for a specific working directory */
+export function createWriteToolset(cwd: string): Tool[] {
+	return [createEditTool(cwd), createWriteTool(cwd)];
+}
+
+/** Create execute toolset for a specific working directory */
+export function createExecuteToolset(cwd: string, options?: ToolsOptions): Tool[] {
+	return [createBashTool(cwd, options?.bash)];
+}
+
+/** Create read-only tools for a specific working directory */
+export function createReadOnlyTools(cwd: string, options?: ToolsOptions): Tool[] {
+	return createReadToolset(cwd, options);
+}
+
+/** Create coding tools for a specific working directory (strict superset of readOnly) */
+export function createCodingTools(cwd: string, options?: ToolsOptions): Tool[] {
+	return [
+		...createReadToolset(cwd, options),
+		...createWriteToolset(cwd),
+		...createExecuteToolset(cwd, options),
+	];
+}
+
+/** Create all tools for a specific working directory */
 export function createAllTools(cwd: string, options?: ToolsOptions): Record<ToolName, Tool> {
 	return {
+		// Read toolset
 		read: createReadTool(cwd, options?.read),
-		bash: createBashTool(cwd, options?.bash),
-		edit: createEditTool(cwd),
-		write: createWriteTool(cwd),
 		grep: createGrepTool(cwd),
 		find: createFindTool(cwd),
 		ls: createLsTool(cwd),
+		// Write toolset
+		edit: createEditTool(cwd),
+		write: createWriteTool(cwd),
+		// Execute toolset
+		bash: createBashTool(cwd, options?.bash),
 	};
 }
