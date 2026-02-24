@@ -899,8 +899,9 @@ export class TUI extends Container {
 			this.previousWidth = width;
 		};
 
-		const _debugRedraw = process.env.PI_DEBUG_REDRAW === "1";
-		const logRedraw = (reason: string, extra?: Record<string, unknown>): void => {
+		const debugRedraw = process.env.PI_DEBUG_REDRAW === "1";
+		const logRedraw = (reason: string, _extra?: Record<string, unknown>): void => {
+			if (!debugRedraw) return;
 			const logPath = path.join(os.homedir(), ".punkin", "agent", "punkin-debug.log");
 			const msg = `${JSON.stringify({
 				ts: new Date().toISOString(),
@@ -911,14 +912,13 @@ export class TUI extends Container {
 				maxLinesRendered: this.maxLinesRendered,
 				cursorRow: this.cursorRow,
 				prevViewportTop: this.previousViewportTop,
-				...extra,
 			})}\n`;
 			try {
 				fs.mkdirSync(path.dirname(logPath), { recursive: true });
-			} catch {}
-			try {
 				fs.appendFileSync(logPath, msg);
-			} catch {}
+			} catch {
+				// Ignore logging errors
+			}
 		};
 
 		// First render - just output everything without clearing (assumes clean screen)
@@ -967,22 +967,6 @@ export class TUI extends Container {
 			lastChanged = newLines.length - 1;
 		}
 		const appendStart = appendedLines && firstChanged === this.previousLines.length && firstChanged > 0;
-
-		// Log differential render state
-		try {
-			const logPath = path.join(os.homedir(), ".punkin", "agent", "punkin-debug.log");
-			const diffState = `${JSON.stringify({
-				ts: new Date().toISOString(),
-				type: "diff",
-				firstChanged,
-				lastChanged,
-				appendStart,
-				prevLines: this.previousLines.length,
-				newLines: newLines.length,
-				height,
-			})}\n`;
-			fs.appendFileSync(logPath, diffState);
-		} catch {}
 
 		// No changes - but still need to update hardware cursor position if it moved
 		if (firstChanged === -1) {
@@ -1033,11 +1017,17 @@ export class TUI extends Container {
 		// Check if firstChanged is above what was previously visible
 		// Use previousLines.length (not maxLinesRendered) to avoid false positives after content shrinks
 		const previousContentViewportTop = Math.max(0, this.previousLines.length - height);
-		if (firstChanged < previousContentViewportTop) {
-			// First change is above previous viewport - need full re-render
-			logRedraw(`firstChanged < viewportTop (${firstChanged} < ${previousContentViewportTop})`);
-			fullRender(true);
+		if (firstChanged < previousContentViewportTop && lastChanged < previousContentViewportTop) {
+			// ALL changes are above the viewport - just update previousLines silently, no redraw needed
+			// This happens when e.g. a tool's background color changes from pending to success
+			// but the tool output has scrolled off screen
+			this.previousLines = newLines;
 			return;
+		}
+		if (firstChanged < previousContentViewportTop) {
+			// Some changes above viewport, some visible - only render visible portion
+			// Adjust firstChanged to start of viewport
+			firstChanged = previousContentViewportTop;
 		}
 
 		// Render from first changed line to end
