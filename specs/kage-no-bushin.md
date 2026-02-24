@@ -27,13 +27,13 @@ This doc specs the unified model.
 
 ---
 
-## Isekai: Modes of Transformation
+## Clone Work Modes
 
-Clones can do different kinds of work — different flavors of "isekai" (transport to another world):
+Clones can do different kinds of work on context:
 
-### Narrative Isekai
+### Narrative Compression
 
-The *story* gets transformed. The clone operates on the history as a program — the sequence of operations, the narrative structure.
+The *story* gets compressed. The clone operates on the history as a program — the sequence of operations, the narrative structure.
 
 - **Input**: Context DSL program (inject, contract, branch, merge...)
 - **Output**: Transformed program (compacted, spliced, restructured)
@@ -47,7 +47,7 @@ clone(task: "compact this range")
   → returns: contract(range, skeletal, ref)
 ```
 
-### Semantic Isekai
+### Semantic Extraction
 
 The *meaning* gets extracted. The clone operates on content to extract structured knowledge — decisions, entities, relations.
 
@@ -65,7 +65,7 @@ clone(task: "extract decisions from this range")
 
 ### Combined
 
-A clone can do both — extract semantics AND produce narrative transformation:
+A clone can do both — extract semantics AND compress narrative:
 
 ```
 clone(task: "compact with knowledge extraction")
@@ -75,6 +75,20 @@ clone(task: "compact with knowledge extraction")
 ```
 
 The narrative layer is the foundation (always have the program). The semantic layer is enrichment (structured meaning when useful).
+
+### Isekai: Transport to Parallel World
+
+True isekai is when a clone spawns with context and operates in a **new parallel world** — a branched working tree, a speculative execution environment that may or may not merge back.
+
+- **Hypotheticals**: Clone tries risky edit in isolated world, parent decides whether to merge
+- **Parallel exploration**: Multiple clones try different approaches in parallel worlds
+- **Transactions**: Sequence of clones, each in its own world, all-or-nothing merge
+
+The clone is transported to a parallel world (COW working tree + branched context), does its work there, and either:
+- **Commits**: Merge changes back to parent world
+- **Aborts**: Discard the parallel world, parent unchanged
+
+This is the full isekai pattern — not just transformation, but transport to a genuinely separate world with its own state.
 
 ---
 
