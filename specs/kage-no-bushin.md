@@ -3,17 +3,80 @@
 **Author:** Carter Schonwald  
 **Date:** 2026-02-22  
 **Status:** Design spec, not implemented  
-**Depends on:** `HANDOFF-subagent-wiring`, `dcp/DESIGN.md`
+**Depends on:** `docs/handoffs/`, `specs/design.md`, `specs/context-dsl.md`
+
+## Naming
+
+**影武士心** (kage bushi shin) — shadow warrior's heart
+
+- 影 (kage) — shadow
+- 武士 (bushi) — warrior
+- 心 (shin/kokoro) — heart, mind, spirit
+
+The clone isn't a mechanical copy. It's a shadow warrior with its own heart — its own reasoning, its own chain of thought, its own perspective. When it returns, it brings back not just results but its reasoning trace.
 
 ## Overview
 
-Kage no Bushin (影の武心, shadow warrior hearts) are the general primitive underlying:
+Kage no Bushin (shadow warrior hearts) are the general primitive underlying:
 1. Compaction (clone summarizes, parent splices)
 2. Subagents (clone does subtask, parent continues)
 3. Speculative execution (clone tries risky thing, parent decides)
 4. Transactional edits (clone sequence with commit/abort)
 
 This doc specs the unified model.
+
+---
+
+## Isekai: Modes of Transformation
+
+Clones can do different kinds of work — different flavors of "isekai" (transport to another world):
+
+### Narrative Isekai
+
+The *story* gets transformed. The clone operates on the history as a program — the sequence of operations, the narrative structure.
+
+- **Input**: Context DSL program (inject, contract, branch, merge...)
+- **Output**: Transformed program (compacted, spliced, restructured)
+- **Preserves**: Operational semantics, replayability
+- **Example**: Compaction — "compress turns 0-50 into skeletal form"
+
+```
+clone(task: "compact this range")
+  → reads program history
+  → produces skeletal form + store refs
+  → returns: contract(range, skeletal, ref)
+```
+
+### Semantic Isekai
+
+The *meaning* gets extracted. The clone operates on content to extract structured knowledge — decisions, entities, relations.
+
+- **Input**: Raw context content
+- **Output**: Knowledge graph nodes/edges
+- **Preserves**: Semantic content, reasoning structure
+- **Example**: Knowledge extraction — "what decisions were made and why?"
+
+```
+clone(task: "extract decisions from this range")
+  → reads conversation content
+  → identifies decisions, reasons, dependencies
+  → returns: [KGNode(decision, ...), KGEdge(depends_on, ...)]
+```
+
+### Combined
+
+A clone can do both — extract semantics AND produce narrative transformation:
+
+```
+clone(task: "compact with knowledge extraction")
+  → produces skeletal form (narrative)
+  → extracts decision graph (semantic)
+  → returns: { program_op: contract(...), knowledge: [...] }
+```
+
+The narrative layer is the foundation (always have the program). The semantic layer is enrichment (structured meaning when useful).
+
+---
 
 ## Core Insight
 
