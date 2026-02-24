@@ -17,6 +17,7 @@ const editSchema = Type.Object({
 	path: Type.String({ description: "Path to the file to edit (relative or absolute)" }),
 	oldText: Type.String({ description: "Exact text to find and replace (must match exactly)" }),
 	newText: Type.String({ description: "New text to replace the old text with" }),
+	intent: Type.String({ description: "Why this edit is being made (required for audit trail)" }),
 });
 
 export type EditToolInput = Static<typeof editSchema>;
@@ -59,7 +60,7 @@ export function createEditTool(cwd: string, options?: EditToolOptions): AgentToo
 		name: "edit",
 		label: "edit",
 		description:
-			"Edit a file by replacing exact text. The oldText must match exactly (including whitespace). Use this for precise, surgical edits.",
+			"Edit a file by replacing exact text. The oldText must match exactly (including whitespace). Use this for precise, surgical edits. REQUIRES visible reasoning (squiggle block) before use.",
 		parameters: editSchema,
 		execute: async (
 			_toolCallId: string,

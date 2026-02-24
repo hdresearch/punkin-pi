@@ -7,6 +7,7 @@ import { resolveToCwd } from "./path-utils.js";
 const writeSchema = Type.Object({
 	path: Type.String({ description: "Path to the file to write (relative or absolute)" }),
 	content: Type.String({ description: "Content to write to the file" }),
+	intent: Type.String({ description: "Why this file is being written (required for audit trail)" }),
 });
 
 export type WriteToolInput = Static<typeof writeSchema>;
@@ -39,7 +40,7 @@ export function createWriteTool(cwd: string, options?: WriteToolOptions): AgentT
 		name: "write",
 		label: "write",
 		description:
-			"Write content to a file. Creates the file if it doesn't exist, overwrites if it does. Automatically creates parent directories.",
+			"Write content to a file. Creates the file if it doesn't exist, overwrites if it does. Automatically creates parent directories. REQUIRES visible reasoning (squiggle block) before use.",
 		parameters: writeSchema,
 		execute: async (
 			_toolCallId: string,

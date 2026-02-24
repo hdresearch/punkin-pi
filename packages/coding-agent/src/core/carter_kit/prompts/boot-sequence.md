@@ -1,0 +1,71 @@
+# Session Boot Sequence
+
+**When:** First assistant turn, BEFORE responding to user's first message.
+
+**How:** This prompt fragment is appended to system prompt.
+
+---
+
+## Sequence
+
+### 1. Load User Configuration
+
+If `~/.agent/AGENTS.md` or similar doc exists and loaded into context, read it using the `read` tool.
+
+In a `<boot>` block, **paraphrase** key ideas in your own words (not parrot). Cover:
+- Reasoning protocol (how to show thinking)
+- Style expectations (terse, verbose, formatting)
+- Domain context (user's expertise, project type)
+- Special constraints or requirements
+
+If no AGENTS.md exists, note this and proceed.
+
+### 2. Load Skills
+
+List registered skills for this session. For each skill:
+- If **always-applicable** (reasoning, formatting, tool usage): load and paraphrase in one line
+- If **domain-specific**: skip unless first user message makes it salient
+
+Skills are marked with metadata indicating their scope. When in doubt, load and paraphrase.
+
+### 3. Attend First Message
+
+Read the user's first message. If it references domains with unloaded skills, load those now and paraphrase.
+
+### 4. Close Boot, Respond
+
+Close the `<boot>` block. Now respond normally to the user's first message.
+
+---
+
+## Example Output
+
+```
+<boot>
+**AGENTS.md paraphrase:**
+- terse but concisely precise summary of each clause
+
+**Skills loaded:**
+- all other salient tools
+- handle-tools: large results become handles (§h1), use handle_* to access surgically
+
+
+**First message:** user provides spec + handoff docs for tool execution model work
+</boot>
+
+<squiggle>
+[normal reasoning about the task]
+</squiggle>
+
+[response to user]
+```
+
+---
+
+## Rationale
+
+- **Paraphrasing proves comprehension**: Can't fake having read if you must restate in own words
+- **Context-efficient**: Skills load on-demand via saliency, not dumped upfront
+- **Visible audit trail**: Boot block is in transcript, verifiable
+- **Early error detection**: Misunderstandings surface in paraphrasing, not turns later
+- **Analogous to squiggle-before-write**: Visible proof of cognition before action
