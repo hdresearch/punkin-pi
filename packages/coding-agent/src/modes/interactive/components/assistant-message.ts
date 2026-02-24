@@ -1,24 +1,24 @@
 import type { AssistantMessage } from "@punkin-pi/ai";
 import { Container, Markdown, type MarkdownTheme, Spacer, Text } from "@punkin-pi/tui";
 import { getMarkdownTheme, theme } from "../theme/theme.js";
+import { ThinkingBlock } from "./thinking-block.js";
 
 /**
  * Component that renders a complete assistant message
  */
 export class AssistantMessageComponent extends Container {
 	private contentContainer: Container;
-	private hideThinkingBlock: boolean;
 	private markdownTheme: MarkdownTheme;
 	private lastMessage?: AssistantMessage;
+	private thinkingBlocks: ThinkingBlock[] = [];
 
 	constructor(
 		message?: AssistantMessage,
-		hideThinkingBlock = false,
+		_hideThinkingBlock = false, // deprecated, ignored — thinking is never hidden
 		markdownTheme: MarkdownTheme = getMarkdownTheme(),
 	) {
 		super();
 
-		this.hideThinkingBlock = hideThinkingBlock;
 		this.markdownTheme = markdownTheme;
 
 		// Container for text/thinking content
@@ -37,12 +37,19 @@ export class AssistantMessageComponent extends Container {
 		}
 	}
 
-	setHideThinkingBlock(hide: boolean): void {
-		this.hideThinkingBlock = hide;
+	/** @deprecated Thinking is never hidden. This is a no-op for backward compatibility. */
+	setHideThinkingBlock(_hide: boolean): void {
+		// no-op — thinking is never hidden
+	}
+
+	/** Get all thinking blocks for toggle interactions */
+	getThinkingBlocks(): ThinkingBlock[] {
+		return this.thinkingBlocks;
 	}
 
 	updateContent(message: AssistantMessage): void {
 		this.lastMessage = message;
+		this.thinkingBlocks = [];
 
 		// Clear content container
 		this.contentContainer.clear();
@@ -69,23 +76,13 @@ export class AssistantMessageComponent extends Container {
 					.slice(i + 1)
 					.some((c) => (c.type === "text" && c.text.trim()) || (c.type === "thinking" && c.thinking.trim()));
 
-				if (this.hideThinkingBlock) {
-					// Show static "Thinking..." label when hidden
-					this.contentContainer.addChild(new Text(theme.italic(theme.fg("thinkingText", "Thinking...")), 1, 0));
-					if (hasVisibleContentAfter) {
-						this.contentContainer.addChild(new Spacer(1));
-					}
-				} else {
-					// Thinking traces in thinkingText color, italic
-					this.contentContainer.addChild(
-						new Markdown(content.thinking.trim(), 1, 0, this.markdownTheme, {
-							color: (text: string) => theme.fg("thinkingText", text),
-							italic: true,
-						}),
-					);
-					if (hasVisibleContentAfter) {
-						this.contentContainer.addChild(new Spacer(1));
-					}
+				// Collapsible thinking block — never hidden, shows 3-line preview when collapsed
+				const thinkingBlock = new ThinkingBlock(content.thinking.trim(), false, this.markdownTheme);
+				this.thinkingBlocks.push(thinkingBlock);
+				this.contentContainer.addChild(thinkingBlock);
+
+				if (hasVisibleContentAfter) {
+					this.contentContainer.addChild(new Spacer(1));
 				}
 			}
 		}
