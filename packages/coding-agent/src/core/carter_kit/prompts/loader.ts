@@ -10,11 +10,23 @@ import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import { isBunBinary } from "../../../config.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-// In dist, we're at dist/core/prompts/loader.js, prompts are copied to dist/core/prompts/
-// In src, we're at src/core/prompts/loader.ts, prompts are at src/core/prompts/
-const PROMPTS_DIR = __dirname;
+
+/**
+ * Get prompts directory.
+ * - Bun binary: prompts/ next to executable
+ * - Node.js: __dirname (dist/core/carter_kit/prompts/ or src/core/carter_kit/prompts/)
+ */
+function getPromptsDir(): string {
+	if (isBunBinary) {
+		return join(dirname(process.execPath), "prompts");
+	}
+	return __dirname;
+}
+
+const PROMPTS_DIR = getPromptsDir();
 
 /**
  * Hash content with SHA3-256, return first 12 hex chars.

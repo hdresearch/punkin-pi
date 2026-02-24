@@ -39,13 +39,21 @@ BINARY_NAME="punkin-${PLATFORM}-${TIMESTAMP}"
 cp dist/punkin "$BUILDS_DIR/$BINARY_NAME"
 chmod +x "$BUILDS_DIR/$BINARY_NAME"
 
-# Also copy as just 'pi' for convenience
+# Also copy as just 'punkin' for convenience
 cp dist/punkin "$BUILDS_DIR/punkin"
 chmod +x "$BUILDS_DIR/punkin"
+
+# macOS: ad-hoc sign to avoid quarantine/Gatekeeper issues
+if [[ "$(uname -s)" == "Darwin" ]]; then
+    echo "==> Signing binaries (ad-hoc)..."
+    codesign -s - "$BUILDS_DIR/$BINARY_NAME"
+    codesign -s - "$BUILDS_DIR/punkin"
+fi
 
 # Copy supporting assets
 cp -r dist/theme "$BUILDS_DIR/" 2>/dev/null || true
 cp -r dist/export-html "$BUILDS_DIR/" 2>/dev/null || true
+cp -r dist/prompts "$BUILDS_DIR/" 2>/dev/null || true
 cp -r dist/docs "$BUILDS_DIR/" 2>/dev/null || true
 cp dist/photon_rs_bg.wasm "$BUILDS_DIR/" 2>/dev/null || true
 cp package.json "$BUILDS_DIR/" 2>/dev/null || true
