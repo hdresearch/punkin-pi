@@ -453,7 +453,76 @@ transaction([
 
 ---
 
-## Part 5: Implementation Considerations
+## Part 5: Clone Safety — Mediated Return
+
+### The Problem
+
+Clone produces results → results go to parent. What could go wrong?
+
+1. **Injection attacks** — Clone output manipulates parent's context/reasoning
+2. **Context pollution** — Clone dumps too much, bloats parent's context
+3. **Trust boundary violations** — Clone accesses things parent shouldn't see
+4. **Confused deputy** — Clone does something with parent's authority it shouldn't
+
+### The Solution: Agent Between Data and Parent
+
+Don't let raw clone output flow directly to parent. Interpose a mediator:
+
+```
+Clone does work
+    ↓
+Results (raw, untrusted)
+    ↓
+Mediator (reviews, filters, transforms)
+    ↓
+Parent gets mediated view
+```
+
+The mediator can be:
+- **Automated filter** — size limits, sanitization, format validation
+- **Another clone** — "review this output before parent sees it"
+- **Operator checkpoint** — human approves before merge (for high-stakes)
+
+### Handle-Like Access
+
+Parent doesn't get raw output. Parent gets a **handle** to clone's results:
+
+```typescript
+clone_result: Handle<CloneOutput>
+
+// Parent can observe, not consume directly
+parent.observe(clone_result, query)  // filtered view
+parent.peek(clone_result, n)         // first N lines
+parent.summary(clone_result)         // auto-generated summary
+```
+
+This is codata semantics applied to clone output. The output exists, but parent accesses it through observations, not full materialization.
+
+### Trust Levels
+
+Clones can have different trust levels:
+
+| Trust Level | What clone can do | How output handled |
+|-------------|------------------|-------------------|
+| **Sandboxed** | Read-only, no network, no secrets | Auto-filter, size limits |
+| **Normal** | Full tools, COW filesystem | Handle-based access |
+| **Elevated** | Can modify parent's files | Operator approval required |
+| **Trusted** | Full access, raw output | Direct merge (rare) |
+
+Default should be **Normal** — full capability but mediated return.
+
+### Defense in Depth
+
+Multiple layers:
+1. **Clone isolation** — COW filesystem, can't affect parent directly
+2. **Output mediation** — Parent gets handle, not raw output
+3. **Diff review** — For file changes, show diff before merge
+4. **Operator checkpoint** — Human in the loop for dangerous operations
+5. **Rollback** — Everything is invertible, can undo merges
+
+---
+
+## Part 6: Implementation Considerations
 
 ### What We're NOT Building (Yet)
 
