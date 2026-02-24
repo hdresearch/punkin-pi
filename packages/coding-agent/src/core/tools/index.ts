@@ -65,6 +65,14 @@ export {
 	type WriteToolOptions,
 	writeTool,
 } from "./write.js";
+export {
+	createSquiggleTools,
+	type EndSquiggleDetails,
+	endSquiggleTool,
+	type StartSquiggleDetails,
+	startSquiggleTool,
+	squiggleTools,
+} from "./squiggle.js";
 
 import type { AgentTool } from "@punkin-pi/agent-core";
 import { type BashToolOptions, bashTool, createBashTool } from "./bash.js";
@@ -120,6 +128,9 @@ export const allTools = {
 };
 
 export type ToolName = keyof typeof allTools;
+
+/** Default tool names (all coding tools) */
+export const defaultToolNames: ToolName[] = Object.keys(allTools) as ToolName[];
 
 export interface ToolsOptions {
 	/** Options for the read tool */

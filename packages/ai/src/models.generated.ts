@@ -10221,6 +10221,23 @@ export const MODELS = {
 			contextWindow: 256000,
 			maxTokens: 256000,
 		} satisfies Model<"anthropic-messages">,
+		"alibaba/qwen3.5-flash": {
+			id: "alibaba/qwen3.5-flash",
+			name: "Qwen 3.5 Flash",
+			api: "anthropic-messages",
+			provider: "vercel-ai-gateway",
+			baseUrl: "https://ai-gateway.vercel.sh",
+			reasoning: true,
+			input: ["text", "image"],
+			cost: {
+				input: 0.09999999999999999,
+				output: 0.39999999999999997,
+				cacheRead: 0.001,
+				cacheWrite: 0.125,
+			},
+			contextWindow: 1000000,
+			maxTokens: 64000,
+		} satisfies Model<"anthropic-messages">,
 		"alibaba/qwen3.5-plus": {
 			id: "alibaba/qwen3.5-plus",
 			name: "Qwen 3.5 Plus",

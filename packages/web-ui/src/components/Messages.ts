@@ -1,10 +1,11 @@
-import type {
-	AssistantMessage as AssistantMessageType,
-	ImageContent,
-	TextContent,
-	ToolCall,
-	ToolResultMessage as ToolResultMessageType,
-	UserMessage as UserMessageType,
+import {
+	now,
+	type AssistantMessage as AssistantMessageType,
+	type ImageContent,
+	type TextContent,
+	type ToolCall,
+	type ToolResultMessage as ToolResultMessageType,
+	type UserMessage as UserMessageType,
 } from "@punkin-pi/ai";
 import { html, LitElement, type TemplateResult } from "lit";
 import { customElement, property } from "lit/decorators.js";
@@ -15,10 +16,13 @@ import { i18n } from "../utils/i18n.js";
 import "./ThinkingBlock.js";
 import type { AgentTool } from "@punkin-pi/agent-core";
 
+import type { Timestamp } from "@punkin-pi/ai";
+
 export type UserMessageWithAttachments = {
 	role: "user-with-attachments";
 	content: string | (TextContent | ImageContent)[];
-	timestamp: number;
+	timestamp: Timestamp;
+	endTimestamp: Timestamp;
 	attachments?: Attachment[];
 };
 
@@ -369,6 +373,7 @@ export function defaultConvertToLlm(messages: AgentMessage[]): Message[] {
 					role: "user",
 					content: textContent,
 					timestamp: m.timestamp,
+					endTimestamp: m.timestamp,
 				} as Message;
 			}
 

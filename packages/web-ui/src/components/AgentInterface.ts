@@ -1,4 +1,4 @@
-import { streamSimple, type ToolResultMessage, type Usage } from "@punkin-pi/ai";
+import { now, streamSimple, type ToolResultMessage, type Usage } from "@punkin-pi/ai";
 import { html, LitElement } from "lit";
 import { customElement, property, query } from "lit/decorators.js";
 import { ModelSelector } from "../dialogs/ModelSelector.js";

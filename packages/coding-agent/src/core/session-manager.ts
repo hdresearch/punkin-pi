@@ -1,6 +1,6 @@
 import type { AgentMessage } from "@punkin-pi/agent-core";
 import type { ImageContent, Message, TextContent } from "@punkin-pi/ai";
-import { randomUUID } from "crypto";
+import { createHash, randomUUID } from "crypto";
 import {
 	appendFileSync,
 	closeSync,
@@ -43,7 +43,8 @@ export interface SessionEntryBase {
 	type: string;
 	id: string;
 	parentId: string | null;
-	timestamp: string;
+	timestamp: string; // ISO string for human readability
+	ts?: string; // Precise epoch micros for content-addressable hashing (optional for legacy entries)
 }
 
 export interface SessionMessageEntry extends SessionEntryBase {
@@ -202,6 +203,16 @@ function generateId(byId: { has(id: string): boolean }): string {
 	}
 	// Fallback to full UUID if somehow we have collisions
 	return randomUUID();
+}
+
+/**
+ * Generate content-addressable ID from full record.
+ * Hash includes all fields: timestamp, content, role, seq, etc.
+ * Returns first 12 hex chars of SHA3-256.
+ */
+function contentAddressableId(record: unknown): string {
+	const serialized = JSON.stringify(record, Object.keys(record as object).sort());
+	return createHash("sha3-256").update(serialized).digest("hex").slice(0, 12);
 }
 
 /** Migrate v1 → v2: add id/parentId tree structure. Mutates in place. */
@@ -660,6 +671,15 @@ async function listSessionsFromDir(
  * Use buildSessionContext() to get the resolved message list for the LLM, which
  * handles compaction summaries and follows the path from root to current leaf.
  */
+/**
+ * High-precision timestamp in microseconds since Unix epoch.
+ * Uses performance.timeOrigin + performance.now() for sub-millisecond precision.
+ */
+function preciseTimestamp(): string {
+	const epochMicros = Math.floor((performance.timeOrigin + performance.now()) * 1000);
+	return epochMicros.toString();
+}
+
 export class SessionManager {
 	private sessionId: string = "";
 	private sessionFile: string | undefined;
@@ -815,49 +835,38 @@ export class SessionManager {
 		this._persist(entry);
 	}
 
-	/** Append a message as child of current leaf, then advance leaf. Returns entry id.
-	 * Does not allow writing CompactionSummaryMessage and BranchSummaryMessage directly.
-	 * Reason: we want these to be top-level entries in the session, not message session entries,
-	 * so it is easier to find them.
-	 * These need to be appended via appendCompaction() and appendBranchSummary() methods.
+	/**
+	 * Create and append an entry with content-addressable ID.
+	 * @param data Entry fields (excluding id and timestamp)
+	 * @returns Entry ID
 	 */
-	appendMessage(message: Message | CustomMessage | BashExecutionMessage): string {
-		const entry: SessionMessageEntry = {
-			type: "message",
-			id: generateId(this.byId),
+	private _createEntry<T extends SessionEntry>(data: Omit<T, "id" | "timestamp" | "parentId" | "ts">): string {
+		const ts = preciseTimestamp();
+		const hashInput = { ...data, parentId: this.leafId, ts };
+		const entry = {
+			...data,
+			id: contentAddressableId(hashInput),
 			parentId: this.leafId,
+			ts,
 			timestamp: new Date().toISOString(),
-			message,
-		};
+		} as T;
 		this._appendEntry(entry);
 		return entry.id;
+	}
+
+	/** Append a message as child of current leaf, then advance leaf. Returns entry id. */
+	appendMessage(message: Message | CustomMessage | BashExecutionMessage): string {
+		return this._createEntry<SessionMessageEntry>({ type: "message", message });
 	}
 
 	/** Append a thinking level change as child of current leaf, then advance leaf. Returns entry id. */
 	appendThinkingLevelChange(thinkingLevel: string): string {
-		const entry: ThinkingLevelChangeEntry = {
-			type: "thinking_level_change",
-			id: generateId(this.byId),
-			parentId: this.leafId,
-			timestamp: new Date().toISOString(),
-			thinkingLevel,
-		};
-		this._appendEntry(entry);
-		return entry.id;
+		return this._createEntry<ThinkingLevelChangeEntry>({ type: "thinking_level_change", thinkingLevel });
 	}
 
 	/** Append a model change as child of current leaf, then advance leaf. Returns entry id. */
 	appendModelChange(provider: string, modelId: string): string {
-		const entry: ModelChangeEntry = {
-			type: "model_change",
-			id: generateId(this.byId),
-			parentId: this.leafId,
-			timestamp: new Date().toISOString(),
-			provider,
-			modelId,
-		};
-		this._appendEntry(entry);
-		return entry.id;
+		return this._createEntry<ModelChangeEntry>({ type: "model_change", provider, modelId });
 	}
 
 	/** Append a compaction summary as child of current leaf, then advance leaf. Returns entry id. */
@@ -868,46 +877,19 @@ export class SessionManager {
 		details?: T,
 		fromHook?: boolean,
 	): string {
-		const entry: CompactionEntry<T> = {
-			type: "compaction",
-			id: generateId(this.byId),
-			parentId: this.leafId,
-			timestamp: new Date().toISOString(),
-			summary,
-			firstKeptEntryId,
-			tokensBefore,
-			details,
-			fromHook,
-		};
-		this._appendEntry(entry);
-		return entry.id;
+		return this._createEntry<CompactionEntry<T>>({ 
+			type: "compaction", summary, firstKeptEntryId, tokensBefore, details, fromHook 
+		});
 	}
 
 	/** Append a custom entry (for extensions) as child of current leaf, then advance leaf. Returns entry id. */
 	appendCustomEntry(customType: string, data?: unknown): string {
-		const entry: CustomEntry = {
-			type: "custom",
-			customType,
-			data,
-			id: generateId(this.byId),
-			parentId: this.leafId,
-			timestamp: new Date().toISOString(),
-		};
-		this._appendEntry(entry);
-		return entry.id;
+		return this._createEntry<CustomEntry>({ type: "custom", customType, data });
 	}
 
 	/** Append a session info entry (e.g., display name). Returns entry id. */
 	appendSessionInfo(name: string): string {
-		const entry: SessionInfoEntry = {
-			type: "session_info",
-			id: generateId(this.byId),
-			parentId: this.leafId,
-			timestamp: new Date().toISOString(),
-			name: name.trim(),
-		};
-		this._appendEntry(entry);
-		return entry.id;
+		return this._createEntry<SessionInfoEntry>({ type: "session_info", name: name.trim() });
 	}
 
 	/** Get the current session name from the latest session_info entry, if any. */
@@ -937,18 +919,9 @@ export class SessionManager {
 		display: boolean,
 		details?: T,
 	): string {
-		const entry: CustomMessageEntry<T> = {
-			type: "custom_message",
-			customType,
-			content,
-			display,
-			details,
-			id: generateId(this.byId),
-			parentId: this.leafId,
-			timestamp: new Date().toISOString(),
-		};
-		this._appendEntry(entry);
-		return entry.id;
+		return this._createEntry<CustomMessageEntry<T>>({ 
+			type: "custom_message", customType, content, display, details 
+		});
 	}
 
 	// =========================================================================

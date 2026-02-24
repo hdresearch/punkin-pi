@@ -64,8 +64,9 @@ export class ProviderKeyInput extends LitElement {
 			// Apply proxy only if this provider/key combination requires it
 			model = applyProxyIfNeeded(model, apiKey, proxyEnabled ? proxyUrl || undefined : undefined);
 
+			const ts = new Date().toISOString();
 			const context: Context = {
-				messages: [{ role: "user", content: "Reply with: ok", timestamp: Date.now() }],
+				messages: [{ role: "user", content: "Reply with: ok", timestamp: ts as any, endTimestamp: ts as any }],
 			};
 
 			const result = await complete(model, context, {

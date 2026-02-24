@@ -260,6 +260,95 @@ const ASSISTANT_WORDS = [
 	"vise",
 ] as const;
 
+// Squiggle sigils - disjoint from USER and ASSISTANT pools
+// These are for model's visible reasoning blocks
+const SQUIGGLE_SIGILS = [
+	"◈",
+	"◇",
+	"◆",
+	"⬡",
+	"⬢",
+	"△",
+	"▽",
+	"☆",
+	"★",
+	"⚝",
+	"✧",
+	"✦",
+	"⋄",
+	"⟐",
+	"⧫",
+	"⬖",
+	"⬗",
+	"⬘",
+	"⬙",
+] as const;
+
+// Squiggle words - disjoint from USER and ASSISTANT pools
+// Astronomical/celestial theme (distinct from natural/tool themes)
+const SQUIGGLE_WORDS = [
+	"aphelion",
+	"apogee",
+	"asterism",
+	"azimuth",
+	"binary",
+	"bolide",
+	"celestial",
+	"chromosphere",
+	"circumpolar",
+	"conjunction",
+	"corona",
+	"crescent",
+	"culmination",
+	"declination",
+	"doppler",
+	"ecliptic",
+	"ephemeris",
+	"equinox",
+	"firmament",
+	"galactic",
+	"gibbous",
+	"heliacal",
+	"inclination",
+	"jovian",
+	"kepler",
+	"libration",
+	"limb",
+	"lunation",
+	"magnitude",
+	"meridian",
+	"nadir",
+	"nebula",
+	"node",
+	"nutation",
+	"occultation",
+	"opposition",
+	"parallax",
+	"parsec",
+	"penumbra",
+	"perigee",
+	"perihelion",
+	"photosphere",
+	"planisphere",
+	"precession",
+	"pulsar",
+	"quadrature",
+	"quasar",
+	"radiant",
+	"redshift",
+	"retrograde",
+	"saros",
+	"sidereal",
+	"solstice",
+	"spectra",
+	"syzygy",
+	"terminator",
+	"transit",
+	"umbra",
+	"zenith",
+	"zodiacal",
+] as const;
+
 // =============================================================================
 // Helpers
 // =============================================================================
@@ -325,3 +414,4 @@ export function wrapAssistant(content: string, params: WrapParams): string {
 
 export const USER_CODEBOOK = { sigils: USER_SIGILS, words: USER_WORDS } as const;
 export const ASSISTANT_CODEBOOK = { sigils: ASSISTANT_SIGILS, words: ASSISTANT_WORDS } as const;
+export const SQUIGGLE_CODEBOOK = { sigils: SQUIGGLE_SIGILS, words: SQUIGGLE_WORDS } as const;

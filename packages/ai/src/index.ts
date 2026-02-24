@@ -20,3 +20,4 @@ export * from "./utils/oauth/index.js";
 export * from "./utils/overflow.js";
 export * from "./utils/typebox-helpers.js";
 export * from "./utils/validation.js";
+export * from "./role-boundary.js";
