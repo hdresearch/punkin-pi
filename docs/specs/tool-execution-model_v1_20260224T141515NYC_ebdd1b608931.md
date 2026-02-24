@@ -383,6 +383,72 @@ Examples:
 
 5. **Write (create new file):** New files have no prior content to read. Exempt from read requirement? Or require squiggle with intent?
 
+6. **Handle naming:** Currently auto-generated (§h1, §h2, ...). Should model explicitly bind handle names at call site? e.g. `§myhandle = read("foo.txt")` — model picks name, visible in transcript, first-class binding. Pro: cleaner semantics, model-controlled naming. Con: more syntax, model has to pick unique names.
+
+---
+
+## Danger Zone Tools
+
+### Categories
+
+1. **Pure** - read, grep, find, ls, pwd, which - no side effects, parallel OK, no gating
+2. **Tracked mutation** - edit, write, mkdir, touch, mv, cp - side effects, parseable, squiggle-gated
+3. **Danger zone** - rm, chmod, chown - trackable but destructive, requires interactive confirmation
+4. **Untrackable** - bash - nukes all read context
+
+### Interactive Confirmation (Danger Zone)
+
+Danger zone tools require user to type `allow` to proceed:
+
+```
+⚠️ DANGER: rm
+  - ./src/old-feature (directory, 23 files)
+  - ./tmp/cache (directory, 156 files)
+
+Type 'allow' to proceed, 'deny' to cancel, 'list' to see files
+> 
+```
+
+- Full word required (`allow` not `a` or `y`) - friction is the feature
+- Accepts list of paths or globs - one confirmation for batch
+- User must type, no arrow keys/menus (terminal UX)
+
+### Critical Paths (Extra Confirmation)
+
+Critical paths require `allow` then `yes`:
+
+- `.git` - repository history
+- `~` or `/` - system paths  
+- Outside project/cwd - escaping sandbox
+
+```
+🛑 CRITICAL: rm .git (REPOSITORY HISTORY)
+Type 'allow' to proceed, 'deny' to cancel
+> allow
+Are you sure? This cannot be undone. Type 'yes' to confirm
+> yes
+```
+
+### Batch Operations
+
+Encourage listing/globbing for conciseness:
+
+```
+# Good - one confirmation
+rm(["src/old1.ts", "src/old2.ts", "src/old3.ts"])
+
+# Better - glob  
+rm("src/old*.ts")
+```
+
+Tool calls should list multiple paths in one call rather than making many separate calls. For danger zone: one confirmation beats five. For all tools: batching enables better parallelism (one `read([a, b, c])` can parallelize internally, three sequential `read(a)` calls cannot).
+
+Batch calls still return individual handles:
+```
+§h1, §h2, §h3 = read(["a.txt", "b.txt", "c.txt"])
+```
+One invocation, parallel execution, separate handles for each result.
+
 ---
 
 ## Cross-References
