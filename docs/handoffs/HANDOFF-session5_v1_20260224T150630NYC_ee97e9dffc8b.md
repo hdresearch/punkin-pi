@@ -2,7 +2,7 @@
 
 **Author:** Carter Schonwald  
 **Session:** 2026-02-24T15:06:30 NYC  
-**Status:** DRAFT (pending hash)
+**Status:** COMPLETE
 
 ---
 
@@ -110,6 +110,31 @@ git status --short:
 3. **Test intent parameter** — ensure schema validation catches missing intent
 
 4. **Squiggle tool invocation** — once interleaved execution works, model can invoke squiggle tools and get formatted output
+
+---
+
+## Validation
+
+Ran `echo "hello, what do you see in your context?" | ./builds/punkin -p`:
+
+```
+<squiggle>
+Context scan — what's present:
+
+1. **System prompt**: pi agent harness, tool definitions...
+2. **Pi documentation pointers**: ...
+3. **AGENTS.md** (Carter's preferences):
+   - Xianxia cultivation frame
+   - Reasoning visibility: squiggle blocks, no hidden thinking
+   - Thread parsing: parallel processing, no forced synthesis
+   ...
+</squiggle>
+
+Hello! Here's what I see:
+...
+```
+
+✅ Model produces visible reasoning in squiggle block and summarizes context appropriately on first turn.
 
 ---
 
