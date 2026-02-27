@@ -119,33 +119,3 @@ export function mkCloseTag(state: TurnBracketState, content: string): string {
 
 	return `} T=${ts.short} H=${hash} Δ${duration} ${state.nonces.user} ${state.sigils.user}}`;
 }
-
-/**
- * wrapContent :: TurnBracketState -> Text -> Text
- * 
- * Wraps content with open and close tags (rich metadata mode).
- */
-export function wrapContent(state: TurnBracketState, content: string): string {
-	const closeTag = mkCloseTag(state, content);
-	return `${state.openTag}\n${content}\n${closeTag}`;
-}
-
-// ============================================================================
-// Simple bracket (always-on structural wrapper, no metadata)
-// ============================================================================
-
-/** Plain open tag — no sigil/nonce/timestamp, just structural. */
-export const SIMPLE_OPEN_TAG = "[assistant]{";
-
-/** Plain close tag. */
-export const SIMPLE_CLOSE_TAG = "}";
-
-/**
- * wrapSimple :: Text -> Text
- *
- * Wraps content with plain structural brackets only.
- * Format: [assistant]{\ncontent\n}
- */
-export function wrapSimple(content: string): string {
-	return `${SIMPLE_OPEN_TAG}\n${content}\n${SIMPLE_CLOSE_TAG}`;
-}

@@ -288,27 +288,23 @@ export class AgentSession {
 			: undefined;
 		this._carterKit = createCarterKitHook(carterKitStorePath, this.sessionManager.getSessionId());
 
-		// Wire up turn bracket prefill — always active; richness controlled per-turn by setting.
-		// Simple brackets ([assistant]{…}) are always injected.
-		// Rich brackets (with sigil/nonce/timestamp/hash) only when enableTurnBrackets = true.
+		// Wire up turn bracket prefill — gated by enableBrackets setting.
+		// When enabled, generates bracket identity + open tag prefill per turn.
+		// Rendering happens in convertToLlm via bracketId metadata.
 		if (this._carterKit) {
 			const hook = this._carterKit;
 			const self = this;
 			this.agent.setPrefill(() => {
-				if (self.settingsManager.getEnableTurnBrackets()) {
-					// Rich mode: full metadata brackets
-					const bracket = hook.turnStart(self._turnIndex);
-					return {
-						prefillText: bracket.openTag,
-						wrapContent: (content: string) => hook.wrapAssistantContent(content),
-					};
-				} else {
-					// Simple mode: plain structural wrapper, no metadata
-					return {
-						prefillText: hook.simpleOpenTag,
-						wrapContent: (content: string) => hook.wrapAssistantContentSimple(content),
-					};
-				}
+				if (!self.settingsManager.getEnableBrackets()) return undefined;
+				// Generate bracket identity and prefill open tag
+				const bracket = hook.turnStart(self._turnIndex);
+				return {
+					prefillText: bracket.openTag,
+					bracketId: {
+						sigil: bracket.sigils.user,
+						nonce: bracket.nonces.user,
+					},
+				};
 			});
 		}
 

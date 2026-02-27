@@ -97,7 +97,7 @@ export interface AgentOptions {
 	 * Returns prefill text for turn bracketing.
 	 * Called before each LLM request to inject a partial assistant message.
 	 */
-	getPrefill?: () => { prefillText: string; wrapContent: (content: string) => string } | undefined;
+	getPrefill?: () => { prefillText: string; bracketId: import("@punkin-pi/ai").BracketId } | undefined;
 }
 
 export class Agent {
@@ -129,7 +129,7 @@ export class Agent {
 	private _thinkingBudgets?: ThinkingBudgets;
 	private _transport: Transport;
 	private _maxRetryDelayMs?: number;
-	private _getPrefill?: () => { prefillText: string; wrapContent: (content: string) => string } | undefined;
+	private _getPrefill?: () => { prefillText: string; bracketId: import("@punkin-pi/ai").BracketId } | undefined;
 	private _providerOptions: Record<string, unknown> = {};
 
 	constructor(opts: AgentOptions = {}) {
@@ -205,7 +205,7 @@ export class Agent {
 		this._maxRetryDelayMs = value;
 	}
 
-	setPrefill(fn: (() => { prefillText: string; wrapContent: (content: string) => string } | undefined) | undefined) {
+	setPrefill(fn: (() => { prefillText: string; bracketId: import("@punkin-pi/ai").BracketId } | undefined) | undefined) {
 		this._getPrefill = fn;
 	}
 
