@@ -101,9 +101,13 @@ export interface AgentLoopConfig extends SimpleStreamOptions {
 	 * Used for turn bracketing — the prefill text is prepended to the assistant response.
 	 * Also returns a wrapContent function to append a closing bracket after generation.
 	 *
+	 * When `bracketId` is provided, it is stored on the AssistantMessage so that
+	 * downstream `convertToLlm` knows the content is already bracket-wrapped and
+	 * should NOT re-wrap.
+	 *
 	 * The prefill text must NOT end with whitespace (Anthropic constraint).
 	 */
-	getPrefill?: () => { prefillText: string; wrapContent: (content: string) => string } | undefined;
+	getPrefill?: () => { prefillText: string; bracketId: import("@punkin-pi/ai").BracketId } | undefined;
 }
 
 /**

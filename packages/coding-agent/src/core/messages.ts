@@ -7,8 +7,9 @@ import type { Timestamp } from "@punkin-pi/ai";
  */
 
 import type { AgentMessage } from "@punkin-pi/agent-core";
-import type { ImageContent, Message, TextContent } from "@punkin-pi/ai";
+import type { AssistantMessage, BracketId, ImageContent, Message, TextContent } from "@punkin-pi/ai";
 import { wrapUser, wrapAssistant, type WrapParams } from "@punkin-pi/ai";
+import { createHash } from "node:crypto";
 
 export const COMPACTION_SUMMARY_PREFIX = `The conversation history before this point was compacted into the following summary:
 
@@ -206,6 +207,24 @@ function messageToRawText(m: AgentMessage): string | null {
 }
 
 /**
+ * Render bracket-wrapped text from stored BracketId + message metadata.
+ *
+ * BracketId stores identity (sigil/nonce). Everything else derived from message fields.
+ * Falls back to wrapAssistant (random sigil/nonce) when no bracketId.
+ */
+function renderFromBracketId(content: string, msg: AssistantMessage, turn: number, delta?: string): string {
+	const bid = msg.bracketId!;
+	const hash = createHash("sha3-256").update(content).digest("hex").slice(0, 12);
+	const ts = msg.timestamp;
+	const endTs = msg.endTimestamp || ts;
+	const timeOnly = typeof endTs === "string" && endTs.includes("T") 
+		? endTs.split("T")[1]?.replace(/-\d{2}:\d{2}$/, "") ?? endTs 
+		: endTs;
+	const deltaStr = delta ? ` Δ${delta}` : "";
+	return `[assistant]{${bid.sigil} ${bid.nonce} T=${ts} turn:${turn}${deltaStr} {\n${content}\n} T=${timeOnly} H=${hash} ${bid.nonce} ${bid.sigil}}`;
+}
+
+/**
  * Transform AgentMessages to LLM-compatible Messages with role boundary wrapping.
  */
 export function convertToLlm(messages: AgentMessage[]): Message[] {
@@ -234,10 +253,18 @@ export function convertToLlm(messages: AgentMessage[]): Message[] {
 		// Get raw text and wrap it
 		const rawText = messageToRawText(m);
 		const isUser = m.role !== "assistant" && m.role !== "toolResult";
-		// Use explicit null check - empty string should still be wrapped
-		const wrapped = rawText !== null && params 
-			? (isUser ? wrapUser(rawText, params) : wrapAssistant(rawText, params))
-			: rawText;
+		// For assistant messages with bracketId: render brackets from stored metadata.
+		// bracketId is the single source of truth — content is stored raw, rendered here.
+		const asst = m.role === "assistant" ? m as AssistantMessage : undefined;
+		let wrapped: string | null;
+		if (asst?.bracketId && rawText !== null) {
+			wrapped = renderFromBracketId(rawText, asst, turn, delta);
+		} else {
+			// Use explicit null check - empty string should still be wrapped
+			wrapped = rawText !== null && params 
+				? (isUser ? wrapUser(rawText, params) : wrapAssistant(rawText, params))
+				: rawText;
+		}
 
 		// Build output message
 		switch (m.role) {

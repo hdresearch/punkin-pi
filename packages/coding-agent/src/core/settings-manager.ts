@@ -146,7 +146,8 @@ export interface Settings {
 	autocompleteMaxVisible?: number; // Max visible items in autocomplete dropdown (default: 5)
 	showHardwareCursor?: boolean; // Show terminal cursor while still positioning it for IME
 	markdown?: MarkdownSettings;
-	enableTurnBrackets?: boolean; // default: false — add sigil/nonce/timestamp/hash metadata to [assistant]{…} wrappers (plain wrapper always present)
+	enableBrackets?: boolean; // default: true — wrap assistant messages in [assistant]{…} brackets (prefill injection + bracket rendering)
+	enableTurnBrackets?: boolean; // default: false — add sigil/nonce/timestamp/hash metadata to [assistant]{…} wrappers (requires enableBrackets)
 	enableContext1M?: boolean; // default: false — enable 1M token context window beta (requires tier 4, eligible models only, 2x input pricing >200K)
 }
 
@@ -967,6 +968,16 @@ export class SettingsManager {
 
 	getCodeBlockIndent(): string {
 		return this.settings.markdown?.codeBlockIndent ?? "  ";
+	}
+
+	getEnableBrackets(): boolean {
+		return this.settings.enableBrackets ?? true;
+	}
+
+	setEnableBrackets(enabled: boolean): void {
+		this.globalSettings.enableBrackets = enabled;
+		this.markModified("enableBrackets");
+		this.save();
 	}
 
 	getEnableTurnBrackets(): boolean {

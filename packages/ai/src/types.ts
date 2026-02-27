@@ -193,17 +193,67 @@ export interface UserMessage {
 	endTimestamp: Timestamp;
 }
 
+/**
+ * BracketId — stored identity for reproducible turn bracket rendering.
+ *
+ * Generated once at turn start, stored on the message forever.
+ * Only stores the random identity (sigil + nonce). All other bracket
+ * metadata (timestamp, turn, hash, duration) is derived from the
+ * message's own fields at render time in convertToLlm.
+ */
+export interface BracketId {
+	readonly sigil: string;
+	readonly nonce: string;
+}
+
+/**
+ * AssistantMessage — a completed LLM response.
+ *
+ * ## Timestamp lifecycle
+ *
+ * ```
+ * T0  submittedAt      agent-loop calls streamFunction()
+ *     ↓ network + queue latency
+ * T1  timestamp         provider sends message_start (HTTP response begins)
+ *     ↓ thinking / prefill / warmup
+ * T2  (first content)   first text_start or thinking_start event
+ *     ttftMs = T2 - T0  (milliseconds)
+ *     ↓ streaming tokens
+ * T3  endTimestamp      done/error — stream complete
+ * ```
+ *
+ * ## Bracket rendering
+ *
+ * When `bracketId` is present, `convertToLlm` renders role boundary brackets
+ * using the stored sigil/nonce identity. All other bracket metadata (timestamp,
+ * turn, hash, duration) is derived from message fields at render time.
+ * Without bracketId, convertToLlm falls back to random sigil/nonce via wrapAssistant.
+ */
 export interface AssistantMessage {
 	role: "assistant";
 	content: (TextContent | ThinkingContent | ToolCall)[];
+	/** Which API surface was used (e.g. "messages", "chat/completions"). */
 	api: Api;
+	/** Provider identifier (e.g. "anthropic", "openai"). */
 	provider: Provider;
+	/** Model identifier string. */
 	model: string;
+	/** Token usage and cost for this response. */
 	usage: Usage;
+	/** Why the model stopped generating. */
 	stopReason: StopReason;
+	/** Error message if stopReason is "error". */
 	errorMessage?: string;
+	/** T1: When the provider acknowledged the request (message_start event). */
 	timestamp: Timestamp;
+	/** T3: When the stream completed (done/error event). */
 	endTimestamp: Timestamp;
+	/** Bracket identity (sigil + nonce) for reproducible rendering in convertToLlm. */
+	bracketId?: BracketId;
+	/** T0: When the LLM request was submitted (before any network/queue latency). */
+	submittedAt?: Timestamp;
+	/** Time to first token in milliseconds (T0 → first text_start or thinking_start). */
+	ttftMs?: number;
 }
 
 export interface ToolResultMessage<TDetails = any> {
