@@ -1,8 +1,63 @@
 import type { Transport } from "@punkin-pi/ai";
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "fs";
+import { homedir } from "os";
 import { dirname, join } from "path";
 import lockfile from "proper-lockfile";
+import { parse as parseToml, stringify as stringifyToml } from "smol-toml";
 import { CONFIG_DIR_NAME, getAgentDir } from "../config.js";
+
+// =============================================================================
+// ~/.agent override dir (Carter's personal agent config — highest priority)
+// =============================================================================
+
+/**
+ * Returns the path to the personal agent override directory.
+ * Defaults to ~/.agent; override with PUNKIN_AGENT_OVERRIDE_DIR env var.
+ */
+function getPersonalAgentOverrideDir(): string {
+	const env = process.env.PUNKIN_AGENT_OVERRIDE_DIR;
+	if (env) {
+		if (env === "~") return homedir();
+		if (env.startsWith("~/")) return homedir() + env.slice(1);
+		return env;
+	}
+	return join(homedir(), ".agent");
+}
+
+/**
+ * Load settings from the personal override dir (~/.agent/).
+ * Reads settings.toml (canonical). If no TOML exists but settings.json does,
+ * auto-converts: parses the JSON, writes settings.toml alongside it, and proceeds.
+ * Returns empty object if neither file exists or parsing fails.
+ */
+function loadPersonalAgentOverride(): Settings {
+	const dir = getPersonalAgentOverrideDir();
+	const tomlPath = join(dir, "settings.toml");
+	const jsonPath = join(dir, "settings.json");
+
+	// Auto-convert JSON → TOML if TOML is absent
+	if (!existsSync(tomlPath) && existsSync(jsonPath)) {
+		try {
+			const jsonRaw = readFileSync(jsonPath, "utf-8");
+			const parsed = JSON.parse(jsonRaw) as Record<string, unknown>;
+			const tomlRaw = stringifyToml(parsed);
+			writeFileSync(tomlPath, tomlRaw, "utf-8");
+		} catch {
+			// conversion failed — fall through, will try JSON read below
+		}
+	}
+
+	if (existsSync(tomlPath)) {
+		try {
+			const raw = readFileSync(tomlPath, "utf-8");
+			return parseToml(raw) as unknown as Settings;
+		} catch {
+			// ignore parse errors — don't crash on bad override file
+		}
+	}
+
+	return {};
+}
 
 export interface CompactionSettings {
 	enabled?: boolean; // default: true
@@ -91,6 +146,8 @@ export interface Settings {
 	autocompleteMaxVisible?: number; // Max visible items in autocomplete dropdown (default: 5)
 	showHardwareCursor?: boolean; // Show terminal cursor while still positioning it for IME
 	markdown?: MarkdownSettings;
+	enableTurnBrackets?: boolean; // default: false — add sigil/nonce/timestamp/hash metadata to [assistant]{…} wrappers (plain wrapper always present)
+	enableContext1M?: boolean; // default: false — enable 1M token context window beta (requires tier 4, eligible models only, 2x input pricing >200K)
 }
 
 /** Deep merge settings: project/overrides take precedence, nested objects merge recursively */
@@ -140,8 +197,8 @@ export class FileSettingsStorage implements SettingsStorage {
 	private projectSettingsPath: string;
 
 	constructor(cwd: string = process.cwd(), agentDir: string = getAgentDir()) {
-		this.globalSettingsPath = join(agentDir, "settings.json");
-		this.projectSettingsPath = join(cwd, CONFIG_DIR_NAME, "settings.json");
+		this.globalSettingsPath = join(agentDir, "settings.toml");
+		this.projectSettingsPath = join(cwd, CONFIG_DIR_NAME, "settings.toml");
 	}
 
 	withLock(scope: SettingsScope, fn: (current: string | undefined) => string | undefined): void {
@@ -212,7 +269,11 @@ export class SettingsManager {
 		this.globalSettingsLoadError = globalLoadError;
 		this.projectSettingsLoadError = projectLoadError;
 		this.errors = [...initialErrors];
-		this.settings = deepMergeSettings(this.globalSettings, this.projectSettings);
+		// ~/.agent/settings.toml is highest priority — applied on top of global+project merge
+		this.settings = deepMergeSettings(
+			deepMergeSettings(this.globalSettings, this.projectSettings),
+			loadPersonalAgentOverride(),
+		);
 	}
 
 	/** Create a SettingsManager that loads from files */
@@ -259,8 +320,8 @@ export class SettingsManager {
 		if (!content) {
 			return {};
 		}
-		const settings = JSON.parse(content);
-		return SettingsManager.migrateSettings(settings);
+		const settings = parseToml(content);
+		return SettingsManager.migrateSettings(settings as Record<string, unknown>);
 	}
 
 	private static tryLoadFromStorage(
@@ -344,7 +405,11 @@ export class SettingsManager {
 			this.recordError("project", projectLoad.error);
 		}
 
-		this.settings = deepMergeSettings(this.globalSettings, this.projectSettings);
+		// re-apply ~/.agent/ top-priority override after reload
+		this.settings = deepMergeSettings(
+			deepMergeSettings(this.globalSettings, this.projectSettings),
+			loadPersonalAgentOverride(),
+		);
 	}
 
 	/** Apply additional overrides on top of current settings */
@@ -416,8 +481,9 @@ export class SettingsManager {
 		modifiedNestedFields: Map<keyof Settings, Set<string>>,
 	): void {
 		this.storage.withLock(scope, (current) => {
+			const isFirstWrite = current === undefined;
 			const currentFileSettings = current
-				? SettingsManager.migrateSettings(JSON.parse(current) as Record<string, unknown>)
+				? SettingsManager.migrateSettings(parseToml(current) as Record<string, unknown>)
 				: {};
 			const mergedSettings: Settings = { ...currentFileSettings };
 			for (const field of modifiedFields) {
@@ -436,12 +502,26 @@ export class SettingsManager {
 				}
 			}
 
-			return JSON.stringify(mergedSettings, null, 2);
+			const activeToml = stringifyToml(mergedSettings as Record<string, unknown>);
+
+			if (isFirstWrite) {
+				// Append the full settings template as a commented reference guide.
+				const templatePath = join(getPersonalAgentOverrideDir(), "settings_template.toml");
+				const template = existsSync(templatePath)
+					? readFileSync(templatePath, "utf-8")
+					: "# See settings_template.toml for all available options.\n";
+				return `${activeToml}\n\n${template}`;
+			}
+
+			return activeToml;
 		});
 	}
 
 	private save(): void {
-		this.settings = deepMergeSettings(this.globalSettings, this.projectSettings);
+		this.settings = deepMergeSettings(
+			deepMergeSettings(this.globalSettings, this.projectSettings),
+			loadPersonalAgentOverride(),
+		);
 
 		if (this.globalSettingsLoadError) {
 			return;
@@ -458,7 +538,10 @@ export class SettingsManager {
 
 	private saveProjectSettings(settings: Settings): void {
 		this.projectSettings = structuredClone(settings);
-		this.settings = deepMergeSettings(this.globalSettings, this.projectSettings);
+		this.settings = deepMergeSettings(
+			deepMergeSettings(this.globalSettings, this.projectSettings),
+			loadPersonalAgentOverride(),
+		);
 
 		if (this.projectSettingsLoadError) {
 			return;
@@ -884,5 +967,25 @@ export class SettingsManager {
 
 	getCodeBlockIndent(): string {
 		return this.settings.markdown?.codeBlockIndent ?? "  ";
+	}
+
+	getEnableTurnBrackets(): boolean {
+		return this.settings.enableTurnBrackets ?? false;
+	}
+
+	setEnableTurnBrackets(enabled: boolean): void {
+		this.globalSettings.enableTurnBrackets = enabled;
+		this.markModified("enableTurnBrackets");
+		this.save();
+	}
+
+	getEnableContext1M(): boolean {
+		return this.settings.enableContext1M ?? false;
+	}
+
+	setEnableContext1M(enabled: boolean): void {
+		this.globalSettings.enableContext1M = enabled;
+		this.markModified("enableContext1M");
+		this.save();
 	}
 }

@@ -130,6 +130,7 @@ export class Agent {
 	private _transport: Transport;
 	private _maxRetryDelayMs?: number;
 	private _getPrefill?: () => { prefillText: string; wrapContent: (content: string) => string } | undefined;
+	private _providerOptions: Record<string, unknown> = {};
 
 	constructor(opts: AgentOptions = {}) {
 		this._state = { ...this._state, ...opts.initialState };

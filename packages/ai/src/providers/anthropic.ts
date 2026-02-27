@@ -178,6 +178,12 @@ export interface AnthropicOptions extends StreamOptions {
 	 */
 	effort?: AnthropicEffort;
 	interleavedThinking?: boolean;
+	/**
+	 * Enable 1M token context window (beta).
+	 * Requires eligible model (Opus 4.6, Sonnet 4.6, 4.5, 4) and usage tier 4.
+	 * Requests >200K input tokens incur 2x input / 1.5x output pricing.
+	 */
+	context1M?: boolean;
 	toolChoice?: "auto" | "any" | "none" | { type: "tool"; name: string };
 }
 
@@ -234,6 +240,7 @@ export const streamAnthropic: StreamFunction<"anthropic-messages", AnthropicOpti
 				model,
 				apiKey,
 				options?.interleavedThinking ?? true,
+				options?.context1M ?? false,
 				options?.headers,
 				copilotDynamicHeaders,
 			);
@@ -485,10 +492,22 @@ function isOAuthToken(apiKey: string): boolean {
 	return apiKey.includes("sk-ant-oat");
 }
 
+/**
+ * Models that support the 1M token context window beta.
+ * Matches: claude-opus-4-6, claude-sonnet-4-6, claude-sonnet-4-5, claude-sonnet-4
+ * (including dated variants and dot-notation aliases)
+ */
+function supportsContext1M(modelId: string): boolean {
+	// Normalize: strip provider prefixes (anthropic., eu.anthropic., us.anthropic., etc.)
+	const id = modelId.replace(/^(?:eu\.|us\.)?anthropic\./, "");
+	return /^claude-(opus-4[.-]6|sonnet-4([.-]6|[.-]5|[.-]0|-20250514)?)\b/.test(id);
+}
+
 function createClient(
 	model: Model<"anthropic-messages">,
 	apiKey: string,
 	interleavedThinking: boolean,
+	context1M: boolean,
 	optionsHeaders?: Record<string, string>,
 	dynamicHeaders?: Record<string, string>,
 ): { client: Anthropic; isOAuthToken: boolean } {
@@ -522,6 +541,10 @@ function createClient(
 	const betaFeatures = ["fine-grained-tool-streaming-2025-05-14"];
 	if (interleavedThinking) {
 		betaFeatures.push("interleaved-thinking-2025-05-14");
+	}
+	// 1M context window — requires opt-in setting AND eligible model
+	if (context1M && supportsContext1M(model.id)) {
+		betaFeatures.push("context-1m-2025-08-07");
 	}
 
 	// OAuth: Bearer auth, Claude Code identity headers

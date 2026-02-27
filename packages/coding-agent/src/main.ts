@@ -98,7 +98,7 @@ function printPackageCommandHelp(command: PackageCommand): void {
 Install a package and add it to settings.
 
 Options:
-  -l, --local    Install project-locally (.pi/settings.json)
+  -l, --local    Install project-locally (.punkin/settings.toml)
 
 Examples:
   ${APP_NAME} install npm:@foo/bar
@@ -117,7 +117,7 @@ Examples:
 Remove a package and its source from settings.
 
 Options:
-  -l, --local    Remove from project settings (.pi/settings.json)
+  -l, --local    Remove from project settings (.punkin/settings.toml)
 
 Example:
   ${APP_NAME} remove npm:@foo/bar
