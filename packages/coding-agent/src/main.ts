@@ -651,7 +651,7 @@ export async function main(args: string[]) {
 	}
 
 	const { initialMessage, initialImages } = await prepareInitialMessage(parsed, settingsManager.getImageAutoResize());
-	const isInteractive = !parsed.print && parsed.mode === undefined;
+	const isInteractive = !parsed.print && !parsed.dumpPrompt && parsed.mode === undefined;
 	const mode = parsed.mode || "text";
 	initTheme(settingsManager.getTheme(), isInteractive);
 
@@ -709,6 +709,12 @@ export async function main(args: string[]) {
 	}
 
 	const { session, modelFallbackMessage } = await createAgentSession(sessionOptions);
+
+	// Handle --dump-prompt: print system prompt and exit
+	if (parsed.dumpPrompt) {
+		console.log(session.systemPrompt);
+		process.exit(0);
+	}
 
 	if (!isInteractive && !session.model) {
 		console.error(chalk.red("No models available."));

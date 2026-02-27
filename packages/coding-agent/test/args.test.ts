@@ -45,6 +45,13 @@ describe("parseArgs", () => {
 		});
 	});
 
+	describe("--dump-prompt flag", () => {
+		test("parses --dump-prompt flag", () => {
+			const result = parseArgs(["--dump-prompt"]);
+			expect(result.dumpPrompt).toBe(true);
+		});
+	});
+
 	describe("--continue flag", () => {
 		test("parses --continue flag", () => {
 			const result = parseArgs(["--continue"]);

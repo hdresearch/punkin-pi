@@ -8,7 +8,7 @@ import type { Timestamp } from "@punkin-pi/ai";
 
 import type { AgentMessage } from "@punkin-pi/agent-core";
 import type { AssistantMessage, BracketId, ImageContent, Message, TextContent } from "@punkin-pi/ai";
-import { wrapUser, wrapAssistant, type WrapParams } from "@punkin-pi/ai";
+import { wrapUser, type WrapParams } from "@punkin-pi/ai";
 import { createHash } from "node:crypto";
 
 export const COMPACTION_SUMMARY_PREFIX = `The conversation history before this point was compacted into the following summary:
@@ -255,19 +255,17 @@ export function convertToLlm(messages: AgentMessage[]): Message[] {
 		const isUser = m.role !== "assistant" && m.role !== "toolResult";
 		// For assistant messages with bracketId: render brackets from stored metadata.
 		// bracketId is the single source of truth — content is stored raw, rendered here.
-		// Without bracketId: assistant gets vanilla [assistant]{…} (no sigil/nonce).
+		// Without bracketId: assistant content passes through raw (no wrapping without prefill).
 		const asst = m.role === "assistant" ? m as AssistantMessage : undefined;
 		let wrapped: string | null;
 		if (asst?.bracketId && rawText !== null) {
 			wrapped = renderFromBracketId(rawText, asst, turn, delta);
-		} else if (asst && rawText !== null) {
-			// Vanilla assistant wrapper — structural only, no identity metadata
-			wrapped = `[assistant]{\n${rawText}\n}`;
+		} else if (isUser && rawText !== null && params) {
+			// User messages get full sigil wrapping
+			wrapped = wrapUser(rawText, params);
 		} else {
-			// User messages get full sigil wrapping; toolResult/other pass through
-			wrapped = rawText !== null && params 
-				? (isUser ? wrapUser(rawText, params) : rawText)
-				: rawText;
+			// Assistant without bracketId, toolResult, or no params — pass through raw
+			wrapped = rawText;
 		}
 
 		// Build output message

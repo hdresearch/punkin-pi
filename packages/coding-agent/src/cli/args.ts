@@ -20,6 +20,7 @@ export interface Args {
 	resume?: boolean;
 	help?: boolean;
 	version?: boolean;
+	dumpPrompt?: boolean;
 	mode?: Mode;
 	noSession?: boolean;
 	session?: string;
@@ -65,6 +66,8 @@ export function parseArgs(args: string[], extensionFlags?: Map<string, { type: "
 			result.help = true;
 		} else if (arg === "--version" || arg === "-v") {
 			result.version = true;
+		} else if (arg === "--dump-prompt") {
+			result.dumpPrompt = true;
 		} else if (arg === "--mode" && i + 1 < args.length) {
 			const mode = args[++i];
 			if (mode === "text" || mode === "json" || mode === "rpc") {
@@ -216,6 +219,7 @@ ${chalk.bold("Options:")}
   --no-themes                    Disable theme discovery and loading
   --export <file>                Export session file to HTML and exit
   --list-models [search]         List available models (with optional fuzzy search)
+  --dump-prompt                  Print the system prompt to stdout and exit
   --verbose                      Force verbose startup (overrides quietStartup setting)
   --help, -h                     Show this help
   --version, -v                  Show version number
