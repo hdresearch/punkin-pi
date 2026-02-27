@@ -7389,13 +7389,13 @@ export const MODELS = {
 			reasoning: true,
 			input: ["text"],
 			cost: {
-				input: 0.3,
-				output: 1.1,
-				cacheRead: 0.15,
+				input: 0.295,
+				output: 1.2,
+				cacheRead: 0.03,
 				cacheWrite: 0,
 			},
 			contextWindow: 196608,
-			maxTokens: 65536,
+			maxTokens: 196608,
 		} satisfies Model<"openai-completions">,
 		"mistralai/codestral-2508": {
 			id: "mistralai/codestral-2508",
@@ -9230,7 +9230,7 @@ export const MODELS = {
 				cacheRead: 0.049999999999999996,
 				cacheWrite: 0,
 			},
-			contextWindow: 32000,
+			contextWindow: 40960,
 			maxTokens: 8192,
 		} satisfies Model<"openai-completions">,
 		"qwen/qwen3-coder": {
