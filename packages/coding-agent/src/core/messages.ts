@@ -255,14 +255,18 @@ export function convertToLlm(messages: AgentMessage[]): Message[] {
 		const isUser = m.role !== "assistant" && m.role !== "toolResult";
 		// For assistant messages with bracketId: render brackets from stored metadata.
 		// bracketId is the single source of truth — content is stored raw, rendered here.
+		// Without bracketId: assistant gets vanilla [assistant]{…} (no sigil/nonce).
 		const asst = m.role === "assistant" ? m as AssistantMessage : undefined;
 		let wrapped: string | null;
 		if (asst?.bracketId && rawText !== null) {
 			wrapped = renderFromBracketId(rawText, asst, turn, delta);
+		} else if (asst && rawText !== null) {
+			// Vanilla assistant wrapper — structural only, no identity metadata
+			wrapped = `[assistant]{\n${rawText}\n}`;
 		} else {
-			// Use explicit null check - empty string should still be wrapped
+			// User messages get full sigil wrapping; toolResult/other pass through
 			wrapped = rawText !== null && params 
-				? (isUser ? wrapUser(rawText, params) : wrapAssistant(rawText, params))
+				? (isUser ? wrapUser(rawText, params) : rawText)
 				: rawText;
 		}
 
