@@ -72,6 +72,18 @@ function loadContextFileFromDir(dir: string): { path: string; content: string } 
 	return null;
 }
 
+/**
+ * The cross-agent standard directory (~/.agent/).
+ * If it exists AND contains an agent context file (AGENTS.md, agent.md, CLAUDE.md),
+ * it is authoritative: skills, prompts, and context come from here exclusively
+ * (no project-local subordinate resources).
+ */
+const CROSS_AGENT_DIR = join(homedir(), ".agent");
+
+function isCrossAgentDirAuthoritative(): boolean {
+	return existsSync(CROSS_AGENT_DIR) && loadContextFileFromDir(CROSS_AGENT_DIR) !== null;
+}
+
 function loadProjectContextFiles(
 	options: { cwd?: string; agentDir?: string } = {},
 ): Array<{ path: string; content: string }> {
@@ -81,10 +93,10 @@ function loadProjectContextFiles(
 	const contextFiles: Array<{ path: string; content: string }> = [];
 	const seenPaths = new Set<string>();
 
-	// Check ~/.agent/ first — if present, it's authoritative (skip all project/ancestor files)
-	const userAgentDir = join(homedir(), ".agent");
-	if (existsSync(userAgentDir)) {
-		const userContext = loadContextFileFromDir(userAgentDir);
+	// Check ~/.agent/ first — if present and has agent context, it's authoritative
+	// (skip all project/ancestor files)
+	if (isCrossAgentDirAuthoritative()) {
+		const userContext = loadContextFileFromDir(CROSS_AGENT_DIR);
 		if (userContext) {
 			return [userContext];
 		}
@@ -405,9 +417,20 @@ export class DefaultResourceLoader implements ResourceLoader {
 
 		this.extensionsResult = this.extensionsOverride ? this.extensionsOverride(extensionsResult) : extensionsResult;
 
-		const skillPaths = this.noSkills
-			? this.mergePaths(cliEnabledSkills, this.additionalSkillPaths)
-			: this.mergePaths([...enabledSkills, ...cliEnabledSkills], this.additionalSkillPaths);
+		// When ~/.agent/ is authoritative, skills come exclusively from ~/.agent/skills/
+		// (no project-local or package-manager skills). CLI-provided skills still respected.
+		let skillPaths: string[];
+		if (isCrossAgentDirAuthoritative()) {
+			const crossAgentSkillsDir = join(CROSS_AGENT_DIR, "skills");
+			skillPaths = this.mergePaths(
+				existsSync(crossAgentSkillsDir) ? [crossAgentSkillsDir] : [],
+				this.mergePaths(cliEnabledSkills, this.additionalSkillPaths),
+			);
+		} else {
+			skillPaths = this.noSkills
+				? this.mergePaths(cliEnabledSkills, this.additionalSkillPaths)
+				: this.mergePaths([...enabledSkills, ...cliEnabledSkills], this.additionalSkillPaths);
+		}
 
 		this.lastSkillPaths = skillPaths;
 		this.updateSkillsFromPaths(skillPaths);
