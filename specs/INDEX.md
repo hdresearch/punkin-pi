@@ -16,6 +16,7 @@ Foundational specifications for punkin-pi's context management and agent archite
 |------|-------------|
 | [kage-no-bushin.md](kage-no-bushin.md) | Shadow clones, hypotheticals, transactions |
 | [tool-interface-design.md](tool-interface-design.md) | Intent-based, async, reference-based tool APIs |
+| [carterkit-protocol.md](carterkit-protocol.md) | CarterKit protocol layers (hook/model/store/wire), CBOR + CDDL |
 
 ## Hooks & Extensions
 
