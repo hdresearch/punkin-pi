@@ -160,7 +160,7 @@ LsError :=
   | PermissionDenied
 ```
 
-## DCP Handle Tools
+## CarterKit Handle Tools
 
 When tool results exceed materialization budget, handles are returned instead.
 

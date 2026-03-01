@@ -21,7 +21,7 @@ engineering — less framing overhead, cleaner parsing.
 Token savings: ~5-8 structural tokens per tool call vs. ~15-30
 for JSON/XML framing. Over a session, thousands of tokens saved.
 
-## DCP's Relationship to DSML
+## CarterKit's Relationship to DSML
 
 Adopt the DeepSeek `<｜ ｜>` delimiter convention for tool call
 structure. That's it for the model's output. Don't burden the

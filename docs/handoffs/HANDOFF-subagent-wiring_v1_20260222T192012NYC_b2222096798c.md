@@ -9,7 +9,7 @@
 
 ### P1: Handle Lifecycle Primitives ✓
 
-Added to `packages/coding-agent/src/core/dcp/types.ts`:
+Added to `packages/coding-agent/src/core/carterkit/types.ts`:
 
 ```typescript
 // Runtime status (in-memory, holds Promise)
@@ -44,11 +44,11 @@ cancelAll(handles) → number
 awaitSettled(handles) → Promise<void>
 ```
 
-**Tests:** `test/dcp-runtime-handle.test.ts` — 35 tests
+**Tests:** `test/carterkit-runtime-handle.test.ts` — 35 tests
 
 ### P2: Async Tool Execution ✓
 
-Added to `packages/coding-agent/src/core/dcp/session-hook.ts`:
+Added to `packages/coding-agent/src/core/carterkit/session-hook.ts`:
 
 ```typescript
 interface DcpHook {
@@ -68,7 +68,7 @@ interface DcpHook {
 }
 ```
 
-**Tests:** `test/dcp-async-tools.test.ts` — 10 tests
+**Tests:** `test/carterkit-async-tools.test.ts` — 10 tests
 
 ### P4: Subagent Spawn ✓
 
@@ -116,7 +116,7 @@ subagent_list()
   → "Subagents (2): §h0: researcher — running, §h1: writer — completed"
 ```
 
-**Tests:** `test/dcp-subagent.test.ts` — 14 tests
+**Tests:** `test/carterkit-subagent.test.ts` — 14 tests
 
 ### Wiring into AgentSession
 
@@ -158,9 +158,9 @@ private _createSpawnFn(): SpawnFn {
 ## Test Summary
 
 ```
-test/dcp-runtime-handle.test.ts  — 35 tests ✓
-test/dcp-async-tools.test.ts     — 10 tests ✓
-test/dcp-subagent.test.ts        — 14 tests ✓
+test/carterkit-runtime-handle.test.ts  — 35 tests ✓
+test/carterkit-async-tools.test.ts     — 10 tests ✓
+test/carterkit-subagent.test.ts        — 14 tests ✓
 ─────────────────────────────────────────────
 Total                            — 59 tests ✓
 ```
@@ -171,17 +171,17 @@ All pass. Full `npm run check` clean.
 
 **Modified:**
 - `packages/coding-agent/src/core/agent-session.ts` — subagent wiring
-- `packages/coding-agent/src/core/dcp/index.ts` — exports
-- `packages/coding-agent/src/core/dcp/session-hook.ts` — async tool methods
-- `packages/coding-agent/src/core/dcp/types.ts` — RuntimeHandle, combinators
+- `packages/coding-agent/src/core/carterkit/index.ts` — exports
+- `packages/coding-agent/src/core/carterkit/session-hook.ts` — async tool methods
+- `packages/coding-agent/src/core/carterkit/types.ts` — RuntimeHandle, combinators
 - `packages/tui/src/tui.ts` — enhanced viewport debug logging (for bug)
 
 **Created:**
-- `packages/coding-agent/src/core/dcp/spawn-tool.ts` — subagent tools
-- `packages/coding-agent/src/core/dcp/subagent.ts` — registry, spawn, supervision
-- `packages/coding-agent/test/dcp-async-tools.test.ts`
-- `packages/coding-agent/test/dcp-runtime-handle.test.ts`
-- `packages/coding-agent/test/dcp-subagent.test.ts`
+- `packages/coding-agent/src/core/carterkit/spawn-tool.ts` — subagent tools
+- `packages/coding-agent/src/core/carterkit/subagent.ts` — registry, spawn, supervision
+- `packages/coding-agent/test/carterkit-async-tools.test.ts`
+- `packages/coding-agent/test/carterkit-runtime-handle.test.ts`
+- `packages/coding-agent/test/carterkit-subagent.test.ts`
 
 ## Still TODO
 
@@ -215,11 +215,11 @@ All pass. Full `npm run check` clean.
 | `docs/specs/codata-semantics.md` | Lazy observation, compute pushdown |
 | `docs/specs/metacog-hooks.md` | Lifecycle hooks (willCompact, etc.) |
 | `docs/specs/tool-interface-design.md` | Intent-first, refs over inline |
-| `dcp/DESIGN.md` | Full DCP spec (3274 lines) |
-| `dcp/HANDOFF.md` | DCP-specific handoff |
-| `dcp/specs/00-INDEX.md` | 17 subsystems, dependency DAG |
-| `dcp/specs/01-store.md` | DuckDB + K12 blob store |
-| `dcp/specs/03-dsml.md` | DeepSeek tool delimiters, harness-centric |
+| `carterkit/DESIGN.md` | Full CarterKit spec (3274 lines) |
+| `carterkit/HANDOFF.md` | CarterKit-specific handoff |
+| `carterkit/specs/00-INDEX.md` | 17 subsystems, dependency DAG |
+| `carterkit/specs/01-store.md` | DuckDB + K12 blob store |
+| `carterkit/specs/03-dsml.md` | DeepSeek tool delimiters, harness-centric |
 
 ## Key Design Decisions
 
@@ -241,9 +241,9 @@ cd /Users/carter/local_dev/dynamic_science/punkin-pi
 ./build-local.sh
 ./builds/punkin
 
-# Run DCP tests
+# Run CarterKit tests
 cd packages/coding-agent
-npx tsx ../../node_modules/vitest/dist/cli.js --run test/dcp-*.test.ts
+npx tsx ../../node_modules/vitest/dist/cli.js --run test/carterkit-*.test.ts
 ```
 
 ---

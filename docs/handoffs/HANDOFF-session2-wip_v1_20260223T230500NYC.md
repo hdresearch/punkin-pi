@@ -83,7 +83,7 @@ Discussed approach:
 This is relevant for:
 1. Session export/persistence
 2. CoT replay for model self-reference
-3. DCP compaction needing access to reasoning
+3. Compaction (MMU) needing access to reasoning
 
 ## Not Started
 
@@ -107,7 +107,7 @@ M packages/coding-agent/src/modes/interactive/components/assistant-message.ts
 
 ## Key Observations
 
-1. **DCP handles engaging aggressively** — file reads >100 lines get replaced with `[Handle §hN]` references. Working as designed but threshold may be too low.
+1. **CarterKit handles engaging aggressively** — file reads >100 lines get replaced with `[Handle §hN]` references. Working as designed but threshold may be too low.
 
 2. **clopencode has reasoning part type** — transcript format explicitly handles `type: "reasoning"` parts, separate from text. This is the pattern to follow.
 

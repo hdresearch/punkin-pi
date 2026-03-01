@@ -9,7 +9,7 @@
 
 ## Executive Summary
 
-punkin-pi is a coding agent with several parallel workstreams in flight. Key tension: **handles appear in output but handle tools aren't available** — the DCP code defining handle tools isn't in the running build.
+punkin-pi is a coding agent with several parallel workstreams in flight. Key tension: **handles appear in output but handle tools aren't available** — the CarterKit code defining handle tools isn't in the running build.
 
 ---
 
@@ -18,7 +18,7 @@ punkin-pi is a coding agent with several parallel workstreams in flight. Key ten
 | Feature | In Code | In Running Build | Gap |
 |---------|---------|------------------|-----|
 | Handle interception (results → handles) | ✓ | Partial? | Handles appear, source unclear |
-| Handle tools (handle_lines, etc.) | ✓ in DCP | ✗ | Tools defined but not registered |
+| Handle tools (handle_lines, etc.) | ✓ in CarterKit | ✗ | Tools defined but not registered |
 | ThinkingBlock (3-line preview) | ✓ | ✓ (just committed) | None |
 | Cross-provider thinking (`<prior_analysis>`) | ✓ | ✓ (just committed) | None |
 | Subagent primitives (spawn, etc.) | ✓ | ✗ | Uncommitted |
@@ -41,17 +41,17 @@ df2dd35e feat(ai,tui): thinking blocks never hidden, cross-provider CoT persiste
 
 ### Uncommitted — Ready to Commit
 
-**DCP Subagents** (59 tests pass):
+**CarterKit Subagents** (59 tests pass):
 ```
 packages/coding-agent/src/core/agent-session.ts
-packages/coding-agent/src/core/dcp/index.ts
-packages/coding-agent/src/core/dcp/session-hook.ts
-packages/coding-agent/src/core/dcp/types.ts
-packages/coding-agent/src/core/dcp/spawn-tool.ts (new)
-packages/coding-agent/src/core/dcp/subagent.ts (new)
-packages/coding-agent/test/dcp-async-tools.test.ts (new)
-packages/coding-agent/test/dcp-runtime-handle.test.ts (new)
-packages/coding-agent/test/dcp-subagent.test.ts (new)
+packages/coding-agent/src/core/carterkit/index.ts
+packages/coding-agent/src/core/carterkit/session-hook.ts
+packages/coding-agent/src/core/carterkit/types.ts
+packages/coding-agent/src/core/carterkit/spawn-tool.ts (new)
+packages/coding-agent/src/core/carterkit/subagent.ts (new)
+packages/coding-agent/test/carterkit-async-tools.test.ts (new)
+packages/coding-agent/test/carterkit-runtime-handle.test.ts (new)
+packages/coding-agent/test/carterkit-subagent.test.ts (new)
 ```
 
 **Config — ~/.agent/ priority + TOML**:
@@ -105,18 +105,18 @@ Model tries: `handle_lines("§h96", 25, 45)`
 Result: `Tool handle_lines not found`
 
 ### Cause
-- Handle DISPLAY comes from somewhere (pi harness? partial DCP?)
-- Handle TOOLS are defined in `packages/coding-agent/src/core/dcp/runtime.ts`
-- But DCP hook isn't installed/running in current build
+- Handle DISPLAY comes from somewhere (pi harness? partial CarterKit?)
+- Handle TOOLS are defined in `packages/coding-agent/src/core/carterkit/runtime.ts`
+- But CarterKit hook isn't installed/running in current build
 - Docs in system prompt reference tools that don't exist
 
 ### Fix Options
-1. **Build DCP code** — commit + rebuild so handle tools exist
-2. **Move handle tools to core** — out of DCP, into always-loaded harness
+1. **Build CarterKit code** — commit + rebuild so handle tools exist
+2. **Move handle tools to core** — out of CarterKit, into always-loaded harness
 3. **Remove handle display** — if tools don't exist, don't show handles
 
 ### Recommendation
-Option 1: Commit DCP, rebuild. Handle tools should come with handle display.
+Option 1: Commit CarterKit, rebuild. Handle tools should come with handle display.
 
 ---
 
@@ -166,15 +166,15 @@ Option 1: Commit DCP, rebuild. Handle tools should come with handle display.
 
 ---
 
-## DCP (Dynamic Compaction Protocol)
+## CarterKit
 
 ### Specs Written
 ```
-dcp/DESIGN.md (141KB, comprehensive)
-dcp/HANDOFF.md
-dcp/specs/00-INDEX.md (17 subsystems, dependency DAG)
-dcp/specs/01-store.md (DuckDB + K12)
-dcp/specs/03-dsml.md (harness-centric)
+carterkit/DESIGN.md (141KB, comprehensive)
+carterkit/HANDOFF.md
+carterkit/specs/00-INDEX.md (17 subsystems, dependency DAG)
+carterkit/specs/01-store.md (DuckDB + K12)
+carterkit/specs/03-dsml.md (harness-centric)
 docs/specs/kage-no-bushin.md (shadow clones, transactions)
 docs/specs/shell-hooks.md (TOML config, turn injection)
 docs/specs/codata-semantics.md (lazy observation)
@@ -184,7 +184,7 @@ docs/tool-type-signatures.md (Lean/Agda style)
 ```
 
 ### Code Written
-- DCP types, session-hook, interceptor, runtime
+- CarterKit types, session-hook, interceptor, runtime
 - Handle tools (PUSHDOWN_TOOLS)
 - Subagent spawn/registry
 - Tests (59 passing)
@@ -262,10 +262,10 @@ Code to prioritize ~/.agent/:
 4. Verify handle_lines etc. work
 
 ### First After Handles Work
-5. **Split specs out from DCP** — the specs (kage-no-bushin, shell-hooks, codata-semantics, metacog-hooks, tool-interface-design) are general concepts, not DCP-specific. Reorganize:
+5. **Split specs out from CarterKit** — the specs (kage-no-bushin, shell-hooks, codata-semantics, metacog-hooks, tool-interface-design) are general concepts, not compaction-specific. Reorganize:
    - `docs/specs/` for general agent specs
-   - `dcp/specs/` only for DCP-specific subsystems (store, page-table, etc.)
-   - Rename references from "DCP handles" to just "handles"
+   - `carterkit/specs/` only for compaction-specific subsystems (store, page-table, etc.)
+   - Rename references from "handles" to just "handles" (already done)
 
 ### Near-term
 6. Wire role boundaries into message transform
@@ -275,8 +275,8 @@ Code to prioritize ~/.agent/:
 
 ### Later
 10. Swift oracle panel
-11. Full DCP store (DuckDB)
-12. Remaining DCP-specific specs
+11. Full compaction store (DuckDB)
+12. Remaining compaction-specific specs
 
 ---
 
@@ -286,14 +286,14 @@ Code to prioritize ~/.agent/:
 # Current branch
 git branch  # handles-and-boundaries
 
-# Commit DCP + config
-git add packages/coding-agent/src/core/dcp/*.ts \
+# Commit CarterKit + config
+git add packages/coding-agent/src/core/carterkit/*.ts \
         packages/coding-agent/src/core/agent-session.ts \
         packages/coding-agent/src/core/package-manager.ts \
         packages/coding-agent/src/core/resource-loader.ts \
         packages/coding-agent/src/core/settings-manager.ts \
-        packages/coding-agent/test/dcp-*.ts
-git commit -m "feat: DCP subagents, handle tools, ~/.agent/ priority, TOML settings"
+        packages/coding-agent/test/carterkit-*.ts
+git commit -m "feat: CarterKit subagents, handle tools, ~/.agent/ priority, TOML settings"
 
 # Commit role boundaries
 git add packages/ai/src/role-boundary.ts docs/handle-tools.md
@@ -319,22 +319,22 @@ git commit -m "feat(ai): role boundaries with distinct user/assistant codebooks"
 
 ## Naming Clarification
 
-**DCP is one subsystem among equals**:
+**CarterKit is the umbrella. Compaction (MMU) is one subsystem among equals.**:
 
 | Subsystem | Scope |
 |-----------|-------|
 | **Handles** | Result interception, lazy materialization, push-down tools |
 | **Subagents** | Spawn, supervision, parallel execution |
-| **Compaction (DCP)** | Context pruning, store, page table, eviction |
+| **Compaction (MMU)** | Context pruning, store, page table, eviction |
 | **Role Boundaries** | User/assistant framing, codebooks, nonces |
 | **Metacog** | Lifecycle hooks, turn injection, checkpoints |
 
-DCP = Dynamic Compaction Protocol. One subsystem. Not the umbrella.
+CarterKit is the umbrella system. Compaction/MMU is the memory management subsystem. Not the umbrella.
 
-Current code layout puts too much under `dcp/`. Reorganize:
+Current code layout puts too much under `carterkit/`. Reorganize:
 - `core/handles/` — handle interception + tools
 - `core/subagents/` — spawn, registry, supervision
-- `core/compaction/` — DCP proper (store, page table)
+- `core/compaction/` — MMU proper (store, page table)
 - `core/boundaries/` — role wrapping
 
 ---

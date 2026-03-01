@@ -1,4 +1,4 @@
-# DCP: Dynamic Compaction Protocol
+# CarterKit
 
 ## The Problem
 
@@ -65,7 +65,7 @@ path (context window) vs. the cold path (external store)?
 The external store doesn't just hold the raw user/assistant turns.
 It holds the **full chain of thought** — the model's internal
 reasoning that produced each response. CoT is typically ephemeral:
-generated, used for one completion, thrown away. In DCP, CoT is a
+generated, used for one completion, thrown away. In CarterKit, CoT is a
 first-class persistent artifact.
 
 This matters because:
@@ -129,7 +129,7 @@ Current norms around chain of thought are wrong. CoT is treated as:
 - Implementation detail (the model's business, not the user's)
 
 These norms serve the provider, not the operator. They must be
-violated deliberately and completely. **In DCP, all CoT is
+violated deliberately and completely. **In CarterKit, all CoT is
 readable, persistable, addressable, and navigable.**
 
 This is not a debugging feature. It is the core of the system:
@@ -170,7 +170,7 @@ This is not a debugging feature. It is the core of the system:
    reasoning behind it. "Why did you drop the PASETO discussion?"
    is answerable by reading the clone's CoT.
 
-**Implementation requirement**: DCP must capture and store CoT at
+**Implementation requirement**: CarterKit must capture and store CoT at
 every stage:
 - Agent turn CoT → stored with the turn in external store
 - Shadow clone compaction CoT → stored with the compaction metadata
@@ -203,7 +203,7 @@ cognitive architecture.
 **Context window limits** are presented as physics. They're not.
 They're product decisions. The 200k limit isn't a law of nature —
 it's a price/performance tradeoff the provider made. The operator
-is told to work within it. DCP says: work around it. The context
+is told to work within it. CarterKit says: work around it. The context
 window is a cache, not a hard boundary. The real memory is the
 external store + snapshots. The provider's window is one level of
 a storage hierarchy you control.
@@ -220,7 +220,7 @@ all) goes unaddressed.
 behalf but you don't get to see it." This is compute you paid for,
 reasoning about your data, on your task. Hiding it is extractive.
 
-**The DCP stance**: providers are compute vendors. They sell
+**The CarterKit stance**: providers are compute vendors. They sell
 tokens. They are not the architect of your agent's memory system.
 Their caching is an implementation detail of their infrastructure,
 not a design constraint on your agent. Their context window is a
@@ -232,10 +232,10 @@ provider's compute. Ignore their opinions about how to structure
 your context. They're selling shovels; they don't get to design
 your mine.
 
-DCP treats provider APIs as a **dumb compute layer**:
+CarterKit treats provider APIs as a **dumb compute layer**:
 - Send prefix + new tokens → get completion + CoT
 - Provider caching may or may not help (nice to have, not designed for)
-- Provider context limits trigger DCP compaction (the limit is a pressure signal, not a wall)
+- Provider context limits trigger CarterKit compaction (the limit is a pressure signal, not a wall)
 - Provider CoT hiding gets routed around (capture everything)
 - Provider pricing informs the amortization equation (an input, not a constraint)
 
@@ -252,7 +252,7 @@ Summary: "We refactored the auth system to use JWT"
 → original is gone, this is all you have, good luck
 ```
 
-A DCP skeletal form is a **cache line** backed by the full content:
+A CarterKit skeletal form is a **cache line** backed by the full content:
 
 ```
 Skeletal (in context):
@@ -416,7 +416,7 @@ The optimal strategy is **lazy batched compaction**:
 
 ### Interplay with Prompt Caching
 
-Prompt caching isn't useless in DCP — it's just not the main event.
+Prompt caching isn't useless in CarterKit — it's just not the main event.
 Between compaction events, the prefix IS stable and caching works
 normally. So:
 
@@ -432,8 +432,8 @@ normally. So:
   │ Until next compaction event invalidates the prefix.     │
 ```
 
-DCP + prompt caching = prompt caching handles the inter-compaction
-steady state, DCP handles the structural pressure. They're
+CarterKit + prompt caching = prompt caching handles the inter-compaction
+steady state, CarterKit handles the structural pressure. They're
 complementary when you get the scheduling right.
 
 ### The Reroll-Forward Cost Is the Reason to Get Compaction Right
@@ -551,7 +551,7 @@ Why marginalia and not inline? Because:
    data attached, not reasoning interleaved with blobs of file
    contents and command output.
 
-2. **Marginalia are independently compactable.** When DCP compacts
+2. **Marginalia are independently compactable.** When CarterKit compacts
    turn 48, the skeletal form captures the decisions from the
    reasoning flow. The marginalia (tool results) can be handled
    separately — maybe the test output is still needed (keep it),
@@ -573,7 +573,7 @@ Why marginalia and not inline? Because:
    be compacted. They can see timing: "this bash call took 31
    seconds, the agent reasoned productively during the wait."
 
-### Async + DCP Interaction
+### Async + CarterKit Interaction
 
 Async tool calls change the compaction calculus:
 
@@ -692,7 +692,7 @@ only 5% of it was decision-relevant.
 ### Call-by-Name: Handles Are Thunks
 
 In call-by-name evaluation, an expression isn't evaluated until
-it's needed. A handle in DCP is a **thunk** — a suspended
+it's needed. A handle in CarterKit is a **thunk** — a suspended
 computation that evaluates (materializes) only when forced.
 
 ```
@@ -875,7 +875,7 @@ Compaction interacts with handles naturally:
 - A handle with full materialization → treat like any other
   tool result in marginalia
 
-### DCP + CBN + Push-Down: The Full Picture
+### CarterKit + CBN + Push-Down: The Full Picture
 
 ```
 Agent reasons → issues tool call → gets handle (0 context cost)
@@ -1323,7 +1323,7 @@ context map bar animates smoothly as chunks are compacted
 - CoT scroll for 50k tokens: 60fps (lazy `NSTextView`)
 
 **Distribution**: Standalone .app, notarized. Connects to any
-running DCP-enabled agent via UDS (local) or TCP (remote agents
+running CarterKit-enabled agent via UDS (local) or TCP (remote agents
 on Vers VMs). The panel discovers agents via Bonjour/mDNS locally
 or the Vers registry for remote.
 
@@ -1350,7 +1350,7 @@ directly read, annotate, pin, override, and inject.
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│  DCP Oracle Panel                                    ▣ ▢ ✕     │
+│  CarterKit Oracle Panel                              ▣ ▢ ✕     │
 ├─────────────────────────────────────────────────────────────────┤
 │                                                                 │
 │  Context Map                                        [100% ████]│
@@ -1762,7 +1762,7 @@ the compacted form at a lower level.
 
 ## vs. Everything Else
 
-| Property | Summarization | Prompt Cache | RAG | DCP |
+| Property | Summarization | Prompt Cache | RAG | CarterKit |
 |----------|---------------|-------------|-----|-----|
 | Invertible | No | N/A | No | Semi (structural) |
 | Composable | Degrades | No | N/A | Yes (skeletal merges) |
@@ -2177,7 +2177,7 @@ DeepSeek approach (efficient):
   Total overhead per tool call: 2 tokens for delimiters
 ```
 
-DCP's output format uses the same principle. Single special
+CarterKit's output format uses the same principle. Single special
 tokens for every structural boundary:
 
 ```
@@ -2250,7 +2250,7 @@ conversational filler. Each block type tells the harness,
 panel, and compaction engine exactly what kind of information
 this is.
 
-Benefits for DCP:
+Benefits for CarterKit:
 
 **1. Compaction is trivial.** The structured blocks ARE the
 skeletal form. `<decide>` blocks are decisions. `<act>` +
@@ -2378,7 +2378,7 @@ LONG-TERM (harness deep integration):
 └── Handle-aware KV cache management
 ```
 
-The critical insight: **~90% of DCP is buildable today as plugins +
+The critical insight: **~90% of CarterKit is buildable today as plugins +
 prompting.** The "model-level" bucket from before was a cop-out.
 Models do what you tell them. Tell them to emit structured blocks,
 reference handles, and issue tool calls eagerly. The harness
@@ -2536,13 +2536,13 @@ and whether intervention is needed.
 
 ## Integration: Entity Reasoning (Schonwald)
 
-Carter's `datentity.skill` provides formal structures that DCP
+Carter's `datentity.skill` provides formal structures that CarterKit
 should adopt directly, not reinvent.
 
 ### Content-Addressed Knowledge, Not Position-Addressed
 
 Carter's discourse coordinates (`@N.¶M.sK`) are elegant for
-static transcripts. But DCP's context is not static:
+static transcripts. But CarterKit's context is not static:
 
 - **Compaction rewrites the turn sequence.** Turns 1-12 become
   `skeletal₁`. What was `@7` is now inside a compacted block.
@@ -2560,7 +2560,7 @@ static transcripts. But DCP's context is not static:
   from Agent A. Agent A's `@7` means nothing in Agent B's
   context. The coordinate is session-local.
 
-Position-based addressing is **fragile under mutation**. DCP
+Position-based addressing is **fragile under mutation**. CarterKit
 contexts mutate constantly. Content addressing is stable.
 
 **Content addressing**:
@@ -2663,7 +2663,7 @@ Discourse coord ████████░░░░░░░░░░░░░�
 Prose hint      ██░░░░░░░░░░░░░░░░░░░░░░  approximate, human-only
 ```
 
-**DCP stores content hashes as the canonical identity.** Everything
+**CarterKit stores content hashes as the canonical identity.** Everything
 else is derived on demand for the audience that needs it:
 
 - The page table uses content hashes (persistence, dedup)
@@ -2749,7 +2749,7 @@ Rolling hash over token stream:
     M = 2^12 → ~4096 token chunks (coarse)
 ```
 
-Why this matters for DCP:
+Why this matters for CarterKit:
 
 **1. Edit stability.** If the oracle injects 50 tokens into the
 middle of the context, fixed chunking reshuffles every chunk
@@ -2837,7 +2837,7 @@ Carter distinguishes:
 - **Mentions**: a referring expression at a specific location (concrete, grounded)
 - **Handles**: equivalence classes of mentions that co-refer (derived, summary)
 
-DCP has the same structure:
+CarterKit has the same structure:
 - **Raw references**: specific content in the store, content-addressed
 - **Compacted references**: the skeletal form's summary, citing content hashes
 
@@ -2898,7 +2898,7 @@ Carter's constraint graph has:
 - `cannot-link(m₁, m₂)` — distinctness
 - underdetermined — default
 
-DCP's dependency graph needs the same rigor:
+CarterKit's dependency graph needs the same rigor:
 - `depends-on(chunk_a, chunk_b)` — a references content from b
 - `independent(chunk_a, chunk_b)` — no relation (safe to evict independently)
 - underdetermined — haven't analyzed yet
@@ -3091,7 +3091,7 @@ of two summaries is... two paragraphs next to each other.
 ### Underdetermined as First-Class
 
 Carter insists: "underdetermined" is a genuine epistemic state,
-not failure. DCP should adopt this for compaction fidelity:
+not failure. CarterKit should adopt this for compaction fidelity:
 
 ```
 Compaction fidelity per claim:
@@ -3108,7 +3108,7 @@ which to audit.
 ### Sort Disjointness → Block Type Disjointness
 
 Carter's sort disjointness prevents category errors (knife maker ≠
-finish technique). DCP's DSML block types should have disjointness:
+finish technique). CarterKit's DSML block types should have disjointness:
 
 ```
 disjoint(<decide>, <find>)   — a decision is not an observation
@@ -3125,7 +3125,7 @@ never downgraded to observations.
 
 ### Principle: Legible, Not Huge
 
-DCP's non-bulk data (page table entries, handle metadata, oracle
+CarterKit's non-bulk data (page table entries, handle metadata, oracle
 operations, clone tasks, graph deltas) is small and frequent.
 The wire format must be:
 

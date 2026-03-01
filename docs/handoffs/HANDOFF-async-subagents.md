@@ -2,7 +2,7 @@
 
 **Author:** Carter Schonwald  
 **Date:** 2026-02-22  
-**Context:** 48-hour session on punkin-pi, pivoting from DCP wiring to execution model redesign
+**Context:** 48-hour session on punkin-pi, pivoting from CarterKit wiring to execution model redesign
 
 ## Provenance Note
 
@@ -18,8 +18,8 @@ Same architect, different scribes. The convergence across specs is consistency, 
 
 ### Done
 - Rebranded to `@punkin-pi/*`, binary `punkin`, config `~/.punkin/`
-- DCP types exist in `src/core/dcp/` (types, store, interceptor, runtime)
-- DCP tool interception wired into `agent-session.ts` (`_wrapToolWithDcp`)
+- CarterKit types exist in `src/core/carterkit/` (types, store, interceptor, runtime)
+- CarterKit tool interception wired into `agent-session.ts` (`_wrapToolWithDcp`)
 - `build-local.sh` produces `builds/punkin`
 - `docs/tool-type-signatures.md` has Lean/Agda style specs
 
@@ -128,7 +128,7 @@ interface Handle<A> {
 
 ### 6. CBN Handle Tools (Push-Down DSL)
 
-Already specified in DCP:
+Already specified in CarterKit:
 ```
 handle_lines(§h7, 40, 60)  // read lines 40-60
 handle_grep(§h7, pattern)  // search
@@ -150,12 +150,12 @@ These force materialization on demand.
 ### Phase 2: Async Tool Execution
 - [ ] `AgentTool.executeAsync()` — returns Handle<Content>
 - [ ] Modify `agent-loop.ts` to track inflight handles
-- [ ] Handle store integration with DCP
+- [ ] Handle store integration with compaction
 
 ### Phase 3: Turn Injection Points
 - [ ] `beforeTurn` hook — inject context at turn start
 - [ ] `afterToolBatch` hook — inject between tool batches
-- [ ] Pressure-aware injection (DCP integration)
+- [ ] Pressure-aware injection (compaction integration)
 
 ### Phase 4: Subagent Spawn
 - [ ] `spawn` tool — creates subagent with isolated context
@@ -171,7 +171,7 @@ These force materialization on demand.
 
 - `packages/agent/src/agent-loop.ts` — main execution loop
 - `packages/coding-agent/src/core/agent-session.ts` — session management
-- `packages/coding-agent/src/core/dcp/` — DCP types and hooks
+- `packages/coding-agent/src/core/carterkit/` — CarterKit types and hooks
 - `packages/tui/src/tui.ts` — TUI (has debug logging for intermittent render bug)
 
 ## Open Questions
@@ -207,9 +207,9 @@ withCleanup = bracket_ (pure ()) checkpoint
 ## Related Docs
 
 ### In This Repo
-- `dcp/DESIGN.md` — full DCP spec (3274 lines)
-- `dcp/HANDOFF.md` — DCP handoff doc
-- `dcp/specs/` — individual spec files
+- `carterkit/DESIGN.md` — full CarterKit spec (3274 lines)
+- `carterkit/HANDOFF.md` — CarterKit handoff doc
+- `carterkit/specs/` — individual spec files
 - `docs/tool-type-signatures.md` — Lean/Agda style tool types
 - `docs/specs/metacog-hooks.md` — lifecycle hooks (willCompact, onSegmentChange)
 - `docs/specs/codata-semantics.md` — lazy observation vs eager materialization

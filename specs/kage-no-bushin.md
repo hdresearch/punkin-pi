@@ -588,11 +588,11 @@ Phase 4:
 
 ---
 
-## Part 6: Interaction with DCP
+## Part 6: Interaction with CarterKit
 
 ### Context Branching
 
-When clone spawns, DCP state branches:
+When clone spawns, CarterKit state branches:
 - Clone gets copy of page table
 - Clone gets copy of handle table
 - Clone's new chunks don't affect parent
@@ -647,9 +647,9 @@ Abort → §h1 discarded
 |-----|-----------|
 | `HANDOFF-subagent-wiring.md` | RuntimeHandle, spawn primitives |
 | `HANDOFF-async-subagents.md` | Supervision, cancellation |
-| `dcp/DESIGN.md` | Page table, eviction, compaction |
-| `dcp/specs/08-clone.md` | (not yet written) Clone task protocol |
-| `dcp/specs/09-splicer.md` | (not yet written) How compacted form merges |
+| `carterkit/DESIGN.md` | Page table, eviction, compaction |
+| `carterkit/specs/08-clone.md` | (not yet written) Clone task protocol |
+| `carterkit/specs/09-splicer.md` | (not yet written) How compacted form merges |
 
 ---
 

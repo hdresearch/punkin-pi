@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Content-addressed storage for DCP: verbatim turns, CoT, skeletal
+Content-addressed storage for CarterKit: verbatim turns, CoT, skeletal
 forms, metadata, page table, handle registry, knowledge graph.
 The lossless backing store that makes compaction fully invertible.
 
@@ -30,7 +30,7 @@ Why not custom store first:
 - Custom K12 content-addressed blob store is correct but slow to build
 - DuckDB gets us running in hours, not days
 - Swap to custom store later if DuckDB becomes a bottleneck (it won't
-  for a long time — DCP data volumes are small)
+  for a long time — CarterKit data volumes are small)
 
 ## Content Hash
 
@@ -156,8 +156,8 @@ CREATE TABLE compaction_log (
 ## Blob Storage
 
 ```
-$DCP_DATA/
-  dcp.duckdb           -- all structured data
+$CARTERKIT_DATA/
+  carterkit.duckdb           -- all structured data
   blobs/
     a7/f3e2b1...       -- git-style sharded directories
     b2/c4d1f8...
@@ -172,7 +172,7 @@ large → disk.
 ## Interface
 
 ```haskell
-module DCP.Store where
+module MMU.Store where
 
 data Store  -- opaque, holds DuckDB connection + blob dir path
 
@@ -214,12 +214,12 @@ evictionScores :: Store -> IO [(ContentHash, Float)]
 
 ## DuckDB Access from Swift
 
-The Swift panel opens the same `dcp.duckdb` file read-only:
+The Swift panel opens the same `carterkit.duckdb` file read-only:
 
 ```swift
 import DuckDB
 
-let db = try Database(store: .file(path: dcpDataPath + "/dcp.duckdb"),
+let db = try Database(store: .file(path: carterkitDataPath + "/carterkit.duckdb"),
                       access: .readOnly)
 let conn = try db.connect()
 
@@ -242,9 +242,9 @@ re-reads on next refresh.
 ## Implementation
 
 Haskell:
-- `DCP.Store` module — wraps DuckDB C API via FFI
-- `DCP.Store.Hash` — K12 via XKCP FFI
-- `DCP.Store.Schema` — table creation, migrations
+- `MMU.Store` module — wraps DuckDB C API via FFI
+- `MMU.Store.Hash` — K12 via XKCP FFI
+- `MMU.Store.Schema` — table creation, migrations
 - Dependencies: `duckdb-haskell` (or raw FFI to libduckdb),
   XKCP (FFI), `bytestring`
 

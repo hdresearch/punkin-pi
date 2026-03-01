@@ -87,7 +87,7 @@ specs/           - all technical specs
 docs/
   handoffs/      - session handoffs
 INDEX.md         - root documentation map
-README.md        - updated, no DCP jargon
+README.md        - updated, no old-naming jargon
 ```
 
 ### 8. Context DSL Spec ✓

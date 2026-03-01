@@ -1,4 +1,4 @@
-# DCP Handoff Document
+# Compaction/MMU Handoff Document
 
 **Date**: 2026-02-19  
 **Session**: design conversation, Noah + Carter context  
@@ -9,9 +9,9 @@ Noah had no AGENTS.md prior to 2026-02-21. Architecture is Carter's; Noah's agen
 was the scribe. See also `docs/specs/*.md` (Carter's agent as scribe) for the
 model-facing API layer of the same design.
 
-## What DCP Is
+## What the Compaction System Is
 
-Dynamic Compaction Protocol. Context management for unbounded
+Context compaction and memory management for unbounded
 agent sessions. The context window is a TLB, not a log.
 
 Core mechanism: shadow clone (Vers VM branch) of the agent does
@@ -206,7 +206,7 @@ boosting. Generational promotion replaces age decay.
 Anthropic extended thinking, DeepSeek reasoning tokens — the
 model reasons, then the provider strips the reasoning before
 the next turn. The model can't see its own past reasoning.
-This is the single worst provider norm for DCP because:
+This is the single worst provider norm for the compaction system because:
 
 1. The model can't learn from its own mistakes within a session
 2. Compaction can't summarize reasoning it can't see
@@ -235,7 +235,7 @@ The extension should:
    own past reasoning on demand
 
 This is design decision 3 (CoT persistence) made concrete.
-Without this, nothing else in DCP works right — compaction
+Without this, nothing else in the compaction system works right — compaction
 without CoT produces lossy summaries, knowledge extraction
 without CoT misses rationale.
 
@@ -298,7 +298,7 @@ model's output before it decided what to say out loud. Treat it
 as regular content that happens to be tagged "thinking." Don't
 build infrastructure around the opacity. Flatten it.
 
-The DCP extension needs to:
+The compaction extension needs to:
 1. On `turn_end` event, extract thinking blocks from the
    assistant message, store to DuckDB as regular text blobs
    (not as a special "cot" type — it's just content)
@@ -332,7 +332,7 @@ Key pi extension hooks:
 ## What To Do Next
 
 ### Immediate (TS extension, ships today):
-1. **Scaffold DCP pi extension** in `~/.pi/agent/extensions/dcp/`
+1. **Scaffold compaction pi extension** in `~/.pi/agent/extensions/compaction/`
    with package.json, DuckDB dep, index.ts
 2. **DuckDB store** — create tables on session_start, schema
    from specs/01-store.md

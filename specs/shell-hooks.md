@@ -367,16 +367,16 @@ this._hooksManager.register(this._extensionRunner);
 
 ---
 
-## Part 5: Interaction with DCP
+## Part 5: Interaction with CarterKit
 
 ### Handle Injection
 
-DCP interceptor stores tool results as handles. At turn start, inject summaries:
+CarterKit interceptor stores tool results as handles. At turn start, inject summaries:
 
 ```typescript
 pi.on("before_turn", async (event, ctx) => {
-  const dcpHook = ctx.dcp;  // DCP session hook
-  const handles = dcpHook.getActiveHandles();
+  const carterkitHook = ctx.carterkit;  // CarterKit session hook
+  const handles = carterkitHook.getActiveHandles();
   
   if (handles.length > 0) {
     return {
@@ -391,7 +391,7 @@ pi.on("before_turn", async (event, ctx) => {
 
 ### Pressure Injection
 
-DCP tracks context usage. Inject warnings:
+CarterKit tracks context usage. Inject warnings:
 
 ```typescript
 pi.on("before_turn", async (event, ctx) => {
@@ -401,9 +401,9 @@ pi.on("before_turn", async (event, ctx) => {
     return {
       inject: [{
         type: "system_suffix",
-        content: `<dcp_pressure level="${Math.floor(usage * 100)}%">` +
+        content: `<carterkit_pressure level="${Math.floor(usage * 100)}%">` +
                  `Context pressure high. Prefer handle_* tools over full reads. ` +
-                 `Be concise.</dcp_pressure>`
+                 `Be concise.</carterkit_pressure>`
       }]
     };
   }

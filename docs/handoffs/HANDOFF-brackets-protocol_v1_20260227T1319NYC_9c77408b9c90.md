@@ -224,7 +224,7 @@ file contents...
 
 | Current | Problem | Proposed |
 |---------|---------|----------|
-| DCP (Dynamic Compaction Protocol) | Confusing every chat | carterKit (already the directory name) |
+| CarterKit | Rename complete | carterKit (directory name, done) |
 | CarterKitHook / session-hook.ts | "Hook" implies extensions, this is core | CarterKitBridge / bridge.ts or just inline |
 | enableTurnBrackets | Only toggles rich vs simple | Keep, but subordinate to enableBrackets |
 
@@ -271,7 +271,7 @@ Original session goal — evaluate which Anthropic/other provider headers to alw
 - `packages/coding-agent/src/core/agent-session.ts` — prefill wiring
 - `packages/coding-agent/src/core/carter_kit/turn-bracket.ts` — bracket generation
 - `packages/coding-agent/src/core/carter_kit/session-hook.ts` — CarterKitHook
-- `packages/coding-agent/src/core/carter_kit/runtime.ts` — DCP runtime
+- `packages/coding-agent/src/core/carter_kit/runtime.ts` — CarterKit runtime
 - `packages/coding-agent/src/core/settings-manager.ts` — enableBrackets/enableTurnBrackets
 - `packages/coding-agent/src/core/tools/squiggle.ts` — existing squiggle tools
 - `packages/coding-agent/src/cli/args.ts` — CLI arg parsing

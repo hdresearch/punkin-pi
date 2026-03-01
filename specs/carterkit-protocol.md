@@ -23,7 +23,7 @@ This doc is CarterKit-specific. It extracts and sharpens protocol content from:
 
 ## Non-Goals
 
-- Full DCP architecture restatement
+- Full CarterKit architecture restatement
 - UI interaction design details
 - Provider-specific API payload schemas
 - Store backend implementation details (DuckDB/file layout)
