@@ -1,12 +1,13 @@
 /**
- * Tests for DCP async tool execution via session-hook.
+ * Tests for CarterKit async tool execution via session-hook.
+ * NOTE: These tests cover WIP async handle features not yet implemented.
  */
 
 import type { AgentTool } from "@punkin-pi/agent-core";
 import { Type } from "@sinclair/typebox";
 import { beforeEach, describe, expect, it } from "vitest";
-import { cancel, force, isSettled, resetHandleCounter } from "../src/core/dcp/index.js";
-import { createDcpHook } from "../src/core/dcp/session-hook.js";
+import { cancel, force, isSettled, resetHandleCounter } from "../src/core/carter_kit/index.js";
+import { createCarterKitHook } from "../src/core/carter_kit/session-hook.js";
 
 // Helper: create a mock tool that resolves after delay
 // Throws on abort (realistic behavior) — the handle machinery should swallow this
@@ -46,14 +47,14 @@ function failingTool(name: string, delayMs: number, error: string): AgentTool<an
 	};
 }
 
-describe("DcpHook async tool execution", () => {
+describe("CarterKitHook async tool execution", () => {
 	beforeEach(() => {
 		resetHandleCounter();
 	});
 
 	describe("startToolAsync", () => {
 		it("returns a handle immediately", () => {
-			const hook = createDcpHook(undefined, "test-session");
+			const hook = createCarterKitHook(undefined, "test-session");
 			const tool = mockTool("slow", 100, "done");
 
 			const handle = hook.startToolAsync(tool, "call-1", {});
@@ -70,7 +71,7 @@ describe("DcpHook async tool execution", () => {
 		});
 
 		it("handle resolves with tool result", async () => {
-			const hook = createDcpHook(undefined, "test-session");
+			const hook = createCarterKitHook(undefined, "test-session");
 			const tool = mockTool("fast", 10, "hello world");
 
 			const handle = hook.startToolAsync(tool, "call-1", {});
@@ -82,7 +83,7 @@ describe("DcpHook async tool execution", () => {
 		});
 
 		it("respects abort signal", async () => {
-			const hook = createDcpHook(undefined, "test-session");
+			const hook = createCarterKitHook(undefined, "test-session");
 			const tool = mockTool("slow", 1000, "never");
 			const abort = new AbortController();
 
@@ -98,7 +99,7 @@ describe("DcpHook async tool execution", () => {
 		});
 
 		it("can be cancelled via handle", async () => {
-			const hook = createDcpHook(undefined, "test-session");
+			const hook = createCarterKitHook(undefined, "test-session");
 			const tool = mockTool("slow", 1000, "never");
 
 			const handle = hook.startToolAsync(tool, "call-1", {});
@@ -113,7 +114,7 @@ describe("DcpHook async tool execution", () => {
 
 	describe("startToolsParallel", () => {
 		it("starts multiple tools and returns handles", () => {
-			const hook = createDcpHook(undefined, "test-session");
+			const hook = createCarterKitHook(undefined, "test-session");
 			const tools = [
 				{ tool: mockTool("a", 50, "result-a"), toolCallId: "call-a", params: {} },
 				{ tool: mockTool("b", 30, "result-b"), toolCallId: "call-b", params: {} },
@@ -131,7 +132,7 @@ describe("DcpHook async tool execution", () => {
 		});
 
 		it("tools execute in parallel", async () => {
-			const hook = createDcpHook(undefined, "test-session");
+			const hook = createCarterKitHook(undefined, "test-session");
 			const tools = [
 				{ tool: mockTool("a", 30, "result-a"), toolCallId: "call-a", params: {} },
 				{ tool: mockTool("b", 30, "result-b"), toolCallId: "call-b", params: {} },
@@ -157,7 +158,7 @@ describe("DcpHook async tool execution", () => {
 
 	describe("executeToolsParallel", () => {
 		it("executes all tools and returns results", async () => {
-			const hook = createDcpHook(undefined, "test-session");
+			const hook = createCarterKitHook(undefined, "test-session");
 			const tools = [
 				{ tool: mockTool("a", 20, "result-a"), toolCallId: "call-a", params: {} },
 				{ tool: mockTool("b", 10, "result-b"), toolCallId: "call-b", params: {} },
@@ -176,7 +177,7 @@ describe("DcpHook async tool execution", () => {
 		});
 
 		it("captures errors per-tool without throwing", async () => {
-			const hook = createDcpHook(undefined, "test-session");
+			const hook = createCarterKitHook(undefined, "test-session");
 			const tools = [
 				{ tool: mockTool("good", 10, "ok"), toolCallId: "call-good", params: {} },
 				{ tool: failingTool("bad", 10, "boom"), toolCallId: "call-bad", params: {} },
@@ -198,7 +199,7 @@ describe("DcpHook async tool execution", () => {
 		});
 
 		it("runs in parallel (timing check)", async () => {
-			const hook = createDcpHook(undefined, "test-session");
+			const hook = createCarterKitHook(undefined, "test-session");
 			const tools = [
 				{ tool: mockTool("a", 25, "a"), toolCallId: "1", params: {} },
 				{ tool: mockTool("b", 25, "b"), toolCallId: "2", params: {} },
@@ -217,9 +218,9 @@ describe("DcpHook async tool execution", () => {
 		});
 	});
 
-	describe("DCP cache integration", () => {
+	describe("CarterKit MMU cache integration", () => {
 		it("returns cached result for pure tool calls", async () => {
-			const hook = createDcpHook(undefined, "test-session");
+			const hook = createCarterKitHook(undefined, "test-session");
 
 			// Create a "read" tool (classified as Pure)
 			let callCount = 0;

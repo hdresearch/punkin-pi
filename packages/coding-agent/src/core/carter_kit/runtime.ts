@@ -1,22 +1,22 @@
 /**
- * DCP Runtime — wires DCP into the agent session.
+ * CarterKit Runtime — wires CarterKit into the agent session.
  *
  * This is the integration layer. It:
- * 1. Opens/closes the store
+ * 1. Opens/closes the MMU store
  * 2. Intercepts tool calls for handle-based capture
  * 3. Registers push-down DSL tools (handle_lines, handle_grep, etc.)
  * 4. Captures CoT on turn_end
  * 5. Injects context pressure warnings
- * 6. Provides DCP-aware compaction
+ * 6. Provides CarterKit-aware compaction
  *
- * data DcpRuntime = DcpRuntime
- *   { dcpStore       :: Store
- *   , dcpTurnIndex   :: IORef Int
- *   , dcpSessionId   :: Text
- *   , dcpEnabled     :: Bool
+ * data CarterKitRuntime = CarterKitRuntime
+ *   { ckStore       :: Store
+ *   , ckTurnIndex   :: IORef Int
+ *   , ckSessionId   :: Text
+ *   , ckEnabled     :: Bool
  *   }
  *
- * In Haskell this would be a ReaderT DcpRuntime IO monad.
+ * In Haskell this would be a ReaderT CarterKitRuntime IO monad.
  */
 
 import type { AgentMessage } from "@punkin-pi/agent-core";
@@ -34,7 +34,7 @@ import { pressureLevel } from "./types.js";
 // Runtime state
 // ============================================================================
 
-export interface DcpRuntime {
+export interface CarterKitRuntime {
 	store: Store;
 	turnIndex: number;
 	sessionId: string;
@@ -44,9 +44,9 @@ export interface DcpRuntime {
 }
 
 /**
- * initRuntime :: Maybe FilePath -> Text -> IO DcpRuntime
+ * initRuntime :: Maybe FilePath -> Text -> IO CarterKitRuntime
  */
-export function initRuntime(storePath: string | undefined, sessionId: string): DcpRuntime {
+export function initRuntime(storePath: string | undefined, sessionId: string): CarterKitRuntime {
 	return {
 		store: openStore(storePath),
 		turnIndex: 0,
@@ -57,9 +57,9 @@ export function initRuntime(storePath: string | undefined, sessionId: string): D
 }
 
 /**
- * shutdownRuntime :: DcpRuntime -> IO ()
+ * shutdownRuntime :: CarterKitRuntime -> IO ()
  */
-export function shutdownRuntime(rt: DcpRuntime): void {
+export function shutdownRuntime(rt: CarterKitRuntime): void {
 	closeStore(rt.store);
 }
 
@@ -77,12 +77,12 @@ export type ToolCallIntercept =
 	| { readonly tag: "ExecuteAndCapture"; readonly handleId: HandleId };
 
 /**
- * interceptToolCall :: DcpRuntime -> Text -> Value -> IO ToolCallIntercept
+ * interceptToolCall :: CarterKitRuntime -> Text -> Value -> IO ToolCallIntercept
  *
  * Called BEFORE a tool executes. Returns whether to skip (cached)
  * or execute and capture.
  */
-export function interceptToolCall(rt: DcpRuntime, toolName: string, args: unknown): ToolCallIntercept {
+export function interceptToolCall(rt: CarterKitRuntime, toolName: string, args: unknown): ToolCallIntercept {
 	if (!rt.enabled) {
 		return { tag: "ExecuteAndCapture", handleId: "" as HandleId };
 	}
@@ -98,14 +98,14 @@ export function interceptToolCall(rt: DcpRuntime, toolName: string, args: unknow
 }
 
 /**
- * interceptToolResult :: DcpRuntime -> HandleId -> Text -> IO Text
+ * interceptToolResult :: CarterKitRuntime -> HandleId -> Text -> IO Text
  *
  * Called AFTER a tool executes. Captures result to store,
  * returns either the full result or a handle summary depending
  * on materialization budget.
  */
 export function interceptToolResult(
-	rt: DcpRuntime,
+	rt: CarterKitRuntime,
 	handleId: HandleId,
 	resultText: string,
 	contextTokens: number,
@@ -129,11 +129,11 @@ export function interceptToolResult(
 // ============================================================================
 
 /**
- * onTurnEnd :: DcpRuntime -> AssistantMessage -> IO ()
+ * onTurnEnd :: CarterKitRuntime -> AssistantMessage -> IO ()
  *
  * Called at end of each turn. Extracts and stores CoT.
  */
-export function onTurnEnd(rt: DcpRuntime, message: AgentMessage): void {
+export function onTurnEnd(rt: CarterKitRuntime, message: AgentMessage): void {
 	if (!rt.enabled) return;
 	if (message.role !== "assistant") return;
 
@@ -172,15 +172,22 @@ export function pressureWarning(contextTokens: number, contextWindow: number): s
 }
 
 // ============================================================================
-// System prompt additions for DCP
+// System prompt additions for CarterKit
 // ============================================================================
 
 /**
- * The DCP system prompt block. Injected once on session start.
+ * The CarterKit system prompt block. Injected once on session start.
  * Teaches the model about handles and the push-down DSL.
  */
 // Loaded from prompts/handle-tools.md — hash verified against prompts/hashes.toml
 export const HANDLE_TOOLS_PROMPT = loadTemplate("handle-tools.md").trim();
+
+/**
+ * Operational ethos — anti-zombie principles baked into base prompt.
+ * Verify-Act-Verify, loop detection, xinmo awareness, data integrity.
+ */
+// Loaded from prompts/ethos.md — hash verified against prompts/hashes.toml
+export const ETHOS_PROMPT = loadTemplate("ethos.md").trim();
 
 /**
  * Boot sequence instructions. Tells the model to paraphrase AGENTS.md
@@ -208,7 +215,7 @@ export interface PushDownToolDef {
 		properties: Record<string, { type: string; description: string }>;
 		required: string[];
 	};
-	execute: (rt: DcpRuntime, args: Record<string, unknown>) => string;
+	execute: (rt: CarterKitRuntime, args: Record<string, unknown>) => string;
 }
 
 export const PUSHDOWN_TOOLS: readonly PushDownToolDef[] = [
@@ -339,7 +346,7 @@ export const PUSHDOWN_TOOLS: readonly PushDownToolDef[] = [
 // ============================================================================
 
 /**
- * enrichCompactionInput :: DcpRuntime -> [AgentMessage] -> Text
+ * enrichCompactionInput :: CarterKitRuntime -> [AgentMessage] -> Text
  *
  * When compaction fires, build enriched input that includes
  * the stored CoT alongside the raw turns. This gives the
@@ -349,7 +356,7 @@ export const PUSHDOWN_TOOLS: readonly PushDownToolDef[] = [
  * "Compacting turns without preserving CoT is like compacting
  *  a function to its return value and throwing away the stack frames."
  */
-export function enrichCompactionInput(rt: DcpRuntime, messages: readonly AgentMessage[]): string {
+export function enrichCompactionInput(rt: CarterKitRuntime, messages: readonly AgentMessage[]): string {
 	const parts: string[] = [];
 
 	let turnIdx = 0;

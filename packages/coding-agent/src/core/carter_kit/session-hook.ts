@@ -1,5 +1,5 @@
 /**
- * DCP Session Hook — integration point between DCP and AgentSession.
+ * CarterKit Session Hook — integration point between CarterKit and AgentSession.
  *
  * Rather than invasively patching agent-session.ts, this module
  * provides hook functions that get called from strategic points
@@ -9,7 +9,7 @@
  * appropriate lifecycle points. Minimal coupling.
  *
  * data CarterKitHook = CarterKitHook
- *   { hookRuntime :: DcpRuntime
+ *   { hookRuntime :: CarterKitRuntime
  *   , hookOnToolCall :: Text -> Value -> IO (Maybe Text)  -- intercept
  *   , hookOnToolResult :: Text -> Text -> IO Text          -- capture
  *   , hookOnTurnEnd :: AgentMessage -> IO ()               -- CoT capture
@@ -21,7 +21,7 @@
 import type { AgentMessage, AgentTool } from "@punkin-pi/agent-core";
 import type { TSchema } from "@sinclair/typebox";
 import { Type } from "@sinclair/typebox";
-import type { DcpRuntime, PushDownToolDef } from "./runtime.js";
+import type { CarterKitRuntime, PushDownToolDef } from "./runtime.js";
 import {
 	COT_REPLAY_TOOL,
 	enrichCompactionInput,
@@ -42,7 +42,7 @@ import type { HandleId } from "./types.js";
 // ============================================================================
 
 export interface CarterKitHook {
-	readonly runtime: DcpRuntime;
+	readonly runtime: CarterKitRuntime;
 
 	/**
 	 * Called before a tool executes.
@@ -75,7 +75,7 @@ export interface CarterKitHook {
 	turnEnd(message: AgentMessage): void;
 
 	/**
-	 * Returns system prompt addition (pressure warning + DCP instructions).
+	 * Returns system prompt addition (pressure warning + CarterKit instructions).
 	 */
 	systemPromptAddition(contextTokens: number, contextWindow: number): string;
 
@@ -182,7 +182,7 @@ export function createCarterKitHook(storePath: string | undefined, sessionId: st
 // Convert PushDownToolDef to AgentTool
 // ============================================================================
 
-function pushDownToolToAgentTool(def: PushDownToolDef, rt: DcpRuntime): AgentTool {
+function pushDownToolToAgentTool(def: PushDownToolDef, rt: CarterKitRuntime): AgentTool {
 	// Build TypeBox schema from the simple parameter definition
 	const props: Record<string, TSchema> = {};
 	for (const [key, prop] of Object.entries(def.parameters.properties)) {

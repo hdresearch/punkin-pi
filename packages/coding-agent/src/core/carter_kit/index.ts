@@ -8,7 +8,7 @@
 export type { CaptureResult, HandleOp, InterceptDecision } from "./interceptor.js";
 export { captureCoT, captureResult, decideIntercept, execHandleOp } from "./interceptor.js";
 // Runtime
-export type { DcpRuntime, PushDownToolDef, ToolCallIntercept } from "./runtime.js";
+export type { CarterKitRuntime, PushDownToolDef, ToolCallIntercept } from "./runtime.js";
 export {
 	COT_REPLAY_TOOL,
 	enrichCompactionInput,

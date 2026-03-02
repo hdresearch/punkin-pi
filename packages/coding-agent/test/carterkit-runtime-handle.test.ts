@@ -1,11 +1,12 @@
 /**
- * Tests for DCP RuntimeHandle — async handle lifecycle primitives.
+ * Tests for CarterKit RuntimeHandle — async handle lifecycle primitives.
+ * NOTE: These tests cover WIP async handle features not yet implemented.
  *
  * These are the CBN (call-by-need) thunks for tool results.
  */
 
 import { describe, expect, it } from "vitest";
-import type { RuntimeHandle, RuntimeHandleStatus } from "../src/core/dcp/index.js";
+import type { RuntimeHandle, RuntimeHandleStatus } from "../src/core/carter_kit/index.js";
 import {
 	awaitSettled,
 	cancel,
@@ -25,7 +26,7 @@ import {
 	raceHandles,
 	resetHandleCounter,
 	tryForce,
-} from "../src/core/dcp/index.js";
+} from "../src/core/carter_kit/index.js";
 
 // Helper: create a handle that resolves after delay
 // Uses a "silent abort" pattern — cancellation just resolves to a sentinel,
