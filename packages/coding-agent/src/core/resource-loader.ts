@@ -54,28 +54,70 @@ function resolvePromptInput(input: string | undefined, description: string): str
 	return input;
 }
 
-function loadContextFileFromDir(dir: string): { path: string; content: string } | null {
-	const candidates = ["AGENTS.md", "agent.md", "CLAUDE.md"];
-	for (const filename of candidates) {
-		const filePath = join(dir, filename);
-		if (existsSync(filePath)) {
-			try {
-				return {
-					path: filePath,
-					content: readFileSync(filePath, "utf-8"),
-				};
-			} catch (error) {
-				console.error(chalk.yellow(`Warning: Could not read ${filePath}: ${error}`));
+function loadContextFilesFromDir(dir: string): Array<{ path: string; content: string }> {
+	const results: Array<{ path: string; content: string }> = [];
+
+	// Only look for agent.md (lowercase) in ~/.agent/
+	// On case-insensitive filesystems (macOS default), both paths resolve to same file
+	const lowerPath = join(dir, "agent.md");
+	const upperPath = join(dir, "AGENT.md");
+	const lowerExists = existsSync(lowerPath);
+	const upperExists = existsSync(upperPath);
+
+	// Check if they're actually different files (case-sensitive FS)
+	// by comparing inodes - if same inode, it's the same file
+	if (lowerExists && upperExists) {
+		try {
+			const lowerStat = statSync(lowerPath);
+			const upperStat = statSync(upperPath);
+			if (lowerStat.ino !== upperStat.ino) {
+				throw new Error(`Both agent.md and AGENT.md exist in ${dir} — remove one to avoid ambiguity`);
+			}
+			// Same inode = case-insensitive FS, same file - proceed with lowercase path
+		} catch (error) {
+			if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
+				throw error;
 			}
 		}
 	}
-	return null;
+
+	if (lowerExists) {
+		try {
+			results.push({
+				path: lowerPath,
+				content: readFileSync(lowerPath, "utf-8"),
+			});
+		} catch (error) {
+			console.error(chalk.yellow(`Warning: Could not read ${lowerPath}: ${error}`));
+		}
+	}
+
+	// Also load coding-prefs.md if it exists
+	const codingPrefsPath = join(dir, "coding-prefs.md");
+	if (existsSync(codingPrefsPath)) {
+		try {
+			results.push({
+				path: codingPrefsPath,
+				content: readFileSync(codingPrefsPath, "utf-8"),
+			});
+		} catch (error) {
+			console.error(chalk.yellow(`Warning: Could not read ${codingPrefsPath}: ${error}`));
+		}
+	}
+
+	return results;
+}
+
+// Backwards compat wrapper - returns first file or null
+function loadContextFileFromDir(dir: string): { path: string; content: string } | null {
+	const files = loadContextFilesFromDir(dir);
+	return files.length > 0 ? files[0] : null;
 }
 
 /**
  * The cross-agent standard directory (~/.agent/).
- * If it exists AND contains an agent context file (AGENTS.md, agent.md, CLAUDE.md),
- * it is authoritative: skills, prompts, and context come from here exclusively
+ * If it exists AND contains agent.md (lowercase), it is authoritative:
+ * skills, prompts, and context come from here exclusively
  * (no project-local subordinate resources).
  */
 const CROSS_AGENT_DIR = join(homedir(), ".agent");
@@ -95,10 +137,11 @@ function loadProjectContextFiles(
 
 	// Check ~/.agent/ first — if present and has agent context, it's authoritative
 	// (skip all project/ancestor files)
+	// Load ALL context files (agent.md + coding-prefs.md)
 	if (isCrossAgentDirAuthoritative()) {
-		const userContext = loadContextFileFromDir(CROSS_AGENT_DIR);
-		if (userContext) {
-			return [userContext];
+		const userContextFiles = loadContextFilesFromDir(CROSS_AGENT_DIR);
+		if (userContextFiles.length > 0) {
+			return userContextFiles;
 		}
 	}
 

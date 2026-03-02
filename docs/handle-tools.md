@@ -106,7 +106,7 @@ type HandleError =
 ## When to Use
 
 1. **Large file reads** — don't materialize 1000 lines, use handle_grep to find what you need
-2. **Context pressure** — when you see `<dcp_pressure>`, prefer handle operations
+2. **Context pressure** — when you see `<context_pressure>`, prefer handle operations
 3. **Targeted access** — know you need line 47? Use handle_lines, not full read
 4. **Search before read** — handle_grep first, then handle_lines on matches
 

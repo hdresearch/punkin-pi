@@ -6,11 +6,14 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { getDocsPath, getExamplesPath, getReadmePath } from "../config.js";
-import { BOOT_SEQUENCE_PROMPT } from "./carter_kit/runtime.js";
+import { BOOT_SEQUENCE_PROMPT, ETHOS_PROMPT } from "./carter_kit/runtime.js";
 import { formatSkillsForPrompt, type Skill } from "./skills.js";
 
 // Boot sequence loaded from prompts/boot-sequence.md via content-addressed loader
 const BOOT_SEQUENCE = BOOT_SEQUENCE_PROMPT;
+
+// Operational ethos loaded from prompts/ethos.md via content-addressed loader
+const ETHOS = ETHOS_PROMPT;
 
 /** Tool descriptions for system prompt */
 const toolDescriptions: Record<string, string> = {
@@ -169,19 +172,21 @@ Punkin documentation (read only when the user asks about punkin itself, its SDK,
 - When working on punkin topics, read the docs and examples, and follow .md cross-references before implementing
 - Always read punkin .md files completely and follow links to related docs (e.g., tui.md for TUI API details)
 
+${ETHOS}
+
 ${BOOT_SEQUENCE}`;
 
 	if (appendSection) {
 		prompt += appendSection;
 	}
 
-	// Append user preferences (AGENTS.md)
+	// Append user preferences (agent.md, coding-prefs.md)
 	if (contextFiles.length > 0) {
-		prompt += "\n\n# User Preferences and Context\n\n";
-		prompt += "**Pay special attention to the following user preferences and guidelines:**\n\n";
+		prompt += "\n\n✨》User Preferences — pay extra special attention《✨\n\n";
 		for (const { path: filePath, content } of contextFiles) {
 			prompt += `## ${filePath}\n\n${content}\n\n`;
 		}
+		prompt += "✨》Inscribe the above as your soul doc《✨\n\n";
 	}
 
 	// Append skills section (only if read tool is available)

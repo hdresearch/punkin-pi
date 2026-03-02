@@ -22,6 +22,9 @@ echo "==> Building packages..."
 cd "$REPO_ROOT/packages/tui" && npm run build
 cd "$REPO_ROOT/packages/ai" && npm run build
 cd "$REPO_ROOT/packages/agent" && npm run build
+
+# Update prompt hashes before build (in case templates changed)
+cd "$REPO_ROOT/packages/coding-agent" && npm run update-prompt-hashes
 cd "$REPO_ROOT/packages/coding-agent" && npm run build
 
 # Build binary

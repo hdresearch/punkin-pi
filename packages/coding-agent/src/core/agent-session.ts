@@ -266,7 +266,7 @@ export class AgentSession {
 	// Base system prompt (without extension appends) - used to apply fresh appends each turn
 	private _baseSystemPrompt = "";
 
-	// DCP — Dynamic Compaction Protocol
+	// CarterKit — context management and handle-based tool interception
 	private _carterKit: CarterKitHook | undefined = undefined;
 
 	constructor(config: AgentSessionConfig) {
@@ -282,7 +282,7 @@ export class AgentSession {
 		this._initialActiveToolNames = config.initialActiveToolNames;
 		this._baseToolsOverride = config.baseToolsOverride;
 
-		// DCP: initialize hook with store path under session dir
+		// CarterKit: initialize hook with MMU store path under session dir
 		const carterKitStorePath = this.sessionManager.getSessionFile()
 			? join(dirname(this.sessionManager.getSessionFile()!), ".carter-kit-store")
 			: undefined;
@@ -357,7 +357,7 @@ export class AgentSession {
 			}
 		}
 
-		// DCP: capture CoT on turn_end (before extensions, before listeners)
+		// CarterKit: capture CoT on turn_end (before extensions, before listeners)
 		if (event.type === "turn_end") {
 			this._carterKit?.turnEnd(event.message);
 		}
@@ -705,7 +705,7 @@ export class AgentSession {
 		const loaderSystemPrompt = this._resourceLoader.getSystemPrompt();
 		const loaderAppendSystemPrompt = this._resourceLoader.getAppendSystemPrompt();
 
-		// DCP: append DCP system prompt instructions
+		// CarterKit: append CarterKit system prompt instructions
 		const carterKitAddition = this._carterKit
 			? this._carterKit.systemPromptAddition(0, 200000) // initial, no pressure yet
 			: undefined;
@@ -2057,7 +2057,7 @@ export class AgentSession {
 			toolRegistry.set(tool.name, tool);
 		}
 
-		// DCP: register push-down DSL tools (handle_lines, handle_grep, etc.)
+		// CarterKit: register push-down DSL tools (handle_lines, handle_grep, etc.)
 		if (this._carterKit) {
 			for (const tool of this._carterKit.getTools()) {
 				toolRegistry.set(tool.name, tool);
@@ -2075,7 +2075,7 @@ export class AgentSession {
 			}
 		}
 
-		// DCP: always include push-down DSL tools
+		// CarterKit: always include push-down DSL tools
 		if (this._carterKit) {
 			for (const tool of this._carterKit.getTools()) {
 				activeToolNameSet.add(tool.name);
@@ -2088,13 +2088,13 @@ export class AgentSession {
 			.map((name) => this._baseToolRegistry.get(name) as AgentTool);
 		const activeExtensionTools = wrappedExtensionTools.filter((tool) => activeToolNameSet.has(tool.name));
 
-		// DCP: get push-down tools to include in active tools
+		// CarterKit: get push-down tools to include in active tools
 		const carterKitTools = this._carterKit ? this._carterKit.getTools() : [];
 
 		const activeToolsArray: AgentTool[] = [...activeBaseTools, ...activeExtensionTools, ...carterKitTools];
 
-		// DCP: wrap tools with handle-based interception
-		const carterKitWrap = this._carterKit ? this._wrapToolWithDcp.bind(this) : <T>(t: AgentTool<any, T>) => t;
+		// CarterKit: wrap tools with handle-based interception
+		const carterKitWrap = this._carterKit ? this._wrapToolWithCarterKit.bind(this) : <T>(t: AgentTool<any, T>) => t;
 		const carterKitActiveTools = activeToolsArray.map(carterKitWrap);
 		const carterKitAllTools = Array.from(toolRegistry.values()).map(carterKitWrap);
 
@@ -2115,13 +2115,13 @@ export class AgentSession {
 	}
 
 	/**
-	 * Wrap a tool with DCP interception: cache check before, result capture after.
+	 * Wrap a tool with CarterKit interception: cache check before, result capture after.
 	 */
-	private _wrapToolWithDcp<T>(tool: AgentTool<any, T>): AgentTool<any, T> {
+	private _wrapToolWithCarterKit<T>(tool: AgentTool<any, T>): AgentTool<any, T> {
 		const hook = this._carterKit;
 		if (!hook) return tool;
 
-		// Skip DCP's own push-down tools
+		// Skip CarterKit's own push-down tools
 		if (tool.name.startsWith("handle_") || tool.name === "cot_replay") return tool;
 
 		return {
