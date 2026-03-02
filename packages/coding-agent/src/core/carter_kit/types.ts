@@ -1,5 +1,5 @@
 /**
- * DCP Core Types — the algebra.
+ * CarterKit Core Types — the algebra.
  *
  * These are the ADTs. If you squint, it's Haskell with worse syntax.
  * Port guide: every `type X = { tag: "a", ... } | { tag: "b", ... }`

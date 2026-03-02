@@ -1,5 +1,5 @@
 /**
- * DCP Store — content-addressed blob store + page table persistence.
+ * CarterKit MMU — content-addressed blob store + page table persistence.
  *
  * TS phase: in-memory Maps, JSON file for persistence.
  * Haskell phase: DuckDB + mmap'd blob files + K12 hashing.

@@ -1,5 +1,5 @@
 /**
- * DCP Tool Interceptor — sits between agent loop and tool execution.
+ * CarterKit Tool Interceptor — sits between agent loop and tool execution.
  *
  * Responsibilities:
  * 1. Classify tool calls (idempotency)
