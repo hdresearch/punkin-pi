@@ -2445,6 +2445,14 @@ export class InteractiveMode {
 				// Tool results are rendered inline with tool calls, handled separately
 				break;
 			}
+			case "turnStart": {
+				// TODO: render turn boundary start
+				break;
+			}
+			case "turnEnd": {
+				// TODO: render turn boundary end
+				break;
+			}
 			default: {
 				const _exhaustive: never = message;
 			}

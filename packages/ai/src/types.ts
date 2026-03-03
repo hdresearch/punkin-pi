@@ -267,7 +267,18 @@ export interface ToolResultMessage<TDetails = any> {
 	endTimestamp: Timestamp;
 }
 
-export type Message = UserMessage | AssistantMessage | ToolResultMessage;
+// Turn boundary types (injected by harness after turn completes)
+export type {
+	TurnStartMessage,
+	TurnEndMessage,
+	BoundaryMessage,
+	SquiggleOpenResult,
+	SquiggleCloseResult,
+} from "./turn-boundary-types.js";
+export { isTurnStart, isTurnEnd, isBoundaryMessage } from "./turn-boundary-types.js";
+import type { TurnStartMessage, TurnEndMessage } from "./turn-boundary-types.js";
+
+export type Message = UserMessage | AssistantMessage | ToolResultMessage | TurnStartMessage | TurnEndMessage;
 
 import type { TSchema } from "@sinclair/typebox";
 

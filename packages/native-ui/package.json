@@ -1,0 +1,42 @@
+{
+	"name": "@punkin-pi/native-ui",
+	"version": "0.8.0.0",
+	"description": "Declarative native UI framework with swappable backends (AppKit, Qt, Web)",
+	"type": "module",
+	"main": "dist/index.js",
+	"types": "dist/index.d.ts",
+	"bin": {
+		"punkin-gui": "dist/main.js"
+	},
+	"exports": {
+		".": "./dist/index.js",
+		"./appkit": "./dist/backends/appkit/index.js",
+		"./runtime": "./dist/core/runtime.js"
+	},
+	"scripts": {
+		"clean": "rm -rf dist",
+		"build": "tsc -p tsconfig.json",
+		"dev": "tsc -p tsconfig.json --watch",
+		"start": "node dist/main.js"
+	},
+	"dependencies": {
+		"koffi": "^2.15.0"
+	},
+	"devDependencies": {
+		"@types/node": "^22.10.5",
+		"typescript": "^5.9.2"
+	},
+	"keywords": [
+		"gui",
+		"native",
+		"appkit",
+		"macos",
+		"declarative",
+		"frp"
+	],
+	"author": "Carter Schonwald",
+	"license": "MIT",
+	"engines": {
+		"node": ">=20.0.0"
+	}
+}

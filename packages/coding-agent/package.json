@@ -43,9 +43,9 @@
 	},
 	"dependencies": {
 		"@mariozechner/jiti": "^2.6.2",
-		"@punkin-pi/agent-core": "^0.8.0.0",
-		"@punkin-pi/ai": "^0.8.0.0",
-		"@punkin-pi/tui": "^0.8.0.0",
+		"@punkin-pi/agent-core": "*",
+		"@punkin-pi/ai": "*",
+		"@punkin-pi/tui": "*",
 		"@silvia-odwyer/photon-node": "^0.3.4",
 		"chalk": "^5.5.0",
 		"cli-highlight": "^2.1.11",

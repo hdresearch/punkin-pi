@@ -17,7 +17,7 @@
 		"prepublishOnly": "npm run clean && npm run build"
 	},
 	"dependencies": {
-		"@punkin-pi/ai": "^0.8.0.0"
+		"@punkin-pi/ai": "*"
 	},
 	"keywords": [
 		"ai",
