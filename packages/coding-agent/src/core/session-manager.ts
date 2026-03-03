@@ -501,9 +501,16 @@ function isMessageWithContent(message: AgentMessage): message is Message {
 }
 
 function extractTextContent(message: Message): string {
-	const content = message.content;
+	// Turn boundary messages have no content
+	if (message.role === "turnStart" || message.role === "turnEnd") {
+		return "";
+	}
+	const content = (message as { content: unknown }).content;
 	if (typeof content === "string") {
 		return content;
+	}
+	if (!Array.isArray(content)) {
+		return "";
 	}
 	return content
 		.filter((block): block is TextContent => block.type === "text")

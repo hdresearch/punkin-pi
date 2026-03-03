@@ -19,6 +19,7 @@
  */
 
 import type { AgentMessage, AgentTool } from "@punkin-pi/agent-core";
+import type { Message, TurnStartMessage, TurnEndMessage } from "@punkin-pi/ai";
 import type { TSchema } from "@sinclair/typebox";
 import { Type } from "@sinclair/typebox";
 import type { CarterKitRuntime, PushDownToolDef } from "./runtime.js";
@@ -34,6 +35,19 @@ import {
 	pressureWarning,
 	shutdownRuntime,
 } from "./runtime.js";
+import {
+	type SquiggleState,
+	initSquiggleState,
+	appendSquiggleContent,
+	setSquiggleTurn,
+	createSquiggleTools,
+} from "./squiggle-tools.js";
+import {
+	type TurnBoundaryState,
+	initTurnBoundaryState,
+	onTurnStart as boundaryTurnStart,
+	onTurnEnd as boundaryTurnEnd,
+} from "./turn-boundary.js";
 import { mkOpenBracket, type TurnBracketState } from "./turn-bracket.js";
 import type { HandleId } from "./types.js";
 
@@ -107,6 +121,44 @@ export interface CarterKitHook {
 	 * Current bracket state (valid during turn).
 	 */
 	readonly currentBracket: TurnBracketState;
+
+	// ========================================================================
+	// Turn boundary support (TurnStartMessage / TurnEndMessage)
+	// ========================================================================
+
+	/**
+	 * Called when assistant turn begins. Records start time, assigns sigil/nonce.
+	 */
+	onAssistantTurnStart(): void;
+
+	/**
+	 * Called when assistant turn completes. Returns boundary messages to inject.
+	 */
+	onAssistantTurnEnd(turnMessages: readonly Message[]): [TurnStartMessage, TurnEndMessage];
+
+	/**
+	 * Current turn's sigil (valid during turn, undefined between turns).
+	 */
+	readonly currentTurnSigil: string | undefined;
+
+	/**
+	 * Current turn's nonce (valid during turn, undefined between turns).
+	 */
+	readonly currentTurnNonce: string | undefined;
+
+	// ========================================================================
+	// Squiggle support
+	// ========================================================================
+
+	/**
+	 * Append content to current squiggle buffer (call as model generates).
+	 */
+	appendSquiggleContent(content: string): void;
+
+	/**
+	 * Get squiggle state for inspection.
+	 */
+	readonly squiggleState: SquiggleState;
 }
 
 // ============================================================================
@@ -119,17 +171,52 @@ export function createCarterKitHook(storePath: string | undefined, sessionId: st
 	// Turn bracket state - initialized on first turnStart call
 	let _currentBracket: TurnBracketState = mkOpenBracket(0);
 
+	// Turn boundary state
+	const _boundaryState: TurnBoundaryState = initTurnBoundaryState();
+
+	// Squiggle state
+	const _squiggleState: SquiggleState = initSquiggleState("strict");
+
 	return {
 		runtime: rt,
 
-		// Turn bracket methods
+		// Turn bracket methods (legacy, for prefill approach)
 		turnStart(turnIndex: number): TurnBracketState {
 			_currentBracket = mkOpenBracket(turnIndex);
+			// Also sync squiggle turn
+			setSquiggleTurn(_squiggleState, turnIndex);
 			return _currentBracket;
 		},
 
 		get currentBracket(): TurnBracketState {
 			return _currentBracket;
+		},
+
+		// Turn boundary methods (new, structural messages)
+		onAssistantTurnStart(): void {
+			boundaryTurnStart(_boundaryState);
+			setSquiggleTurn(_squiggleState, _boundaryState.currentTurn);
+		},
+
+		onAssistantTurnEnd(turnMessages: readonly Message[]): [TurnStartMessage, TurnEndMessage] {
+			return boundaryTurnEnd(_boundaryState, turnMessages);
+		},
+
+		get currentTurnSigil(): string | undefined {
+			return _boundaryState.currentSigil;
+		},
+
+		get currentTurnNonce(): string | undefined {
+			return _boundaryState.currentNonce;
+		},
+
+		// Squiggle methods
+		appendSquiggleContent(content: string): void {
+			appendSquiggleContent(_squiggleState, content);
+		},
+
+		get squiggleState(): SquiggleState {
+			return _squiggleState;
 		},
 
 		beforeToolCall(toolName: string, args: unknown) {
@@ -169,7 +256,9 @@ export function createCarterKitHook(storePath: string | undefined, sessionId: st
 
 		getTools() {
 			const allToolDefs = [...PUSHDOWN_TOOLS, COT_REPLAY_TOOL];
-			return allToolDefs.map((def) => pushDownToolToAgentTool(def, rt));
+			const pushDownTools = allToolDefs.map((def) => pushDownToolToAgentTool(def, rt));
+			const squiggleTools = createSquiggleTools(_squiggleState);
+			return [...pushDownTools, ...squiggleTools];
 		},
 
 		shutdown() {

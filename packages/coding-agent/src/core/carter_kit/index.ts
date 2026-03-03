@@ -38,6 +38,36 @@ export {
 	putChunk,
 	putHandle,
 } from "./store.js";
+// Squiggle tools — visible reasoning demarcation
+export type {
+	SquiggleState,
+	SquiggleFrame,
+	SquiggleNestingPolicy,
+	SquiggleError,
+	SquiggleOpenOutcome,
+	SquiggleCloseOutcome,
+} from "./squiggle-tools.js";
+export {
+	initSquiggleState,
+	isSquiggleOpen,
+	currentSquiggle,
+	squiggleDepth,
+	appendSquiggleContent,
+	setSquiggleTurn,
+	executeSquiggleOpen,
+	executeSquiggleClose,
+	createSquiggleTools,
+} from "./squiggle-tools.js";
+// Turn boundaries — TurnStartMessage / TurnEndMessage injection
+export type { TurnBoundaryState } from "./turn-boundary.js";
+export {
+	initTurnBoundaryState,
+	onTurnStart,
+	onTurnEnd as onTurnBoundaryEnd,
+	injectTurnBoundaries,
+	renderTurnStart,
+	renderTurnEnd,
+} from "./turn-boundary.js";
 // Types — the algebra
 export type {
 	Blob,
