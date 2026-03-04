@@ -226,16 +226,12 @@ function renderTurnEnd(msg: TurnEndMessage): string {
 }
 
 /**
- * Check if role increments turn (user-like messages).
+ * Check if role increments turn.
+ * User messages and compaction boundaries (phase changes) increment turns.
+ * Tool results (bashExecution, custom) are part of the same turn as the assistant.
  */
 function isTurnIncrementing(role: string): boolean {
-	return (
-		role === "user" ||
-		role === "bashExecution" ||
-		role === "custom" ||
-		role === "branchSummary" ||
-		role === "compactionSummary"
-	);
+	return role === "user" || role === "branchSummary" || role === "compactionSummary";
 }
 
 /**

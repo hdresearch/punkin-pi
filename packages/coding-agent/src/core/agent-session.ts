@@ -456,8 +456,47 @@ export class AgentSession {
 		return undefined;
 	}
 
+	/** Inject turn boundary messages into the message array for LLM context */
+	private _injectTurnBoundaries(event: Extract<AgentEvent, { type: "turn_end" }>): void {
+		if (!this._carterKit) return;
+
+		// Collect messages from this turn (assistant + tool results)
+		// Cast is safe: AgentMessage = Message | CustomMessages, we're using base Message types
+		const turnMessages = [event.message, ...event.toolResults] as unknown as import("@punkin-pi/ai").Message[];
+		const [turnStart, turnEnd] = this._carterKit.onAssistantTurnEnd(turnMessages);
+
+		// Inject turn boundaries into the message array for LLM context
+		// Find the assistant message in the array (should be near the end)
+		const messages = this.agent.state.messages;
+		const assistantIdx = messages.findIndex((m) => m === event.message);
+		console.error(`[TURN-BOUNDARY-DEBUG] assistantIdx=${assistantIdx}, messages.length=${messages.length}, event.message.role=${event.message?.role}`);
+		if (assistantIdx !== -1) {
+			// Insert turnStart before the assistant message
+			messages.splice(assistantIdx, 0, turnStart as unknown as AgentMessage);
+			// Append turnEnd at the end (after tool results which are already there)
+			messages.push(turnEnd as unknown as AgentMessage);
+			console.error(`[TURN-BOUNDARY-DEBUG] Injected! new messages.length=${messages.length}`);
+		} else {
+			console.error(`[TURN-BOUNDARY-DEBUG] FAILED: could not find assistant message in state.messages`);
+		}
+
+		// Persist turn boundaries to session JSONL
+		this.sessionManager.appendTurnBoundary(turnStart);
+		this.sessionManager.appendTurnBoundary(turnEnd);
+
+		// Emit turn boundary event for TUI rendering
+		this._emit({ type: "turn_boundary", turnStart, turnEnd });
+	}
+
 	/** Emit extension events based on agent events */
 	private async _emitExtensionEvent(event: AgentEvent): Promise<void> {
+		// CarterKit turn boundary injection happens regardless of extension runner
+		if (event.type === "turn_start") {
+			this._carterKit?.onAssistantTurnStart();
+		} else if (event.type === "turn_end") {
+			this._injectTurnBoundaries(event);
+		}
+
 		if (!this._extensionRunner) return;
 
 		if (event.type === "agent_start") {
@@ -466,9 +505,7 @@ export class AgentSession {
 		} else if (event.type === "agent_end") {
 			await this._extensionRunner.emit({ type: "agent_end", messages: event.messages });
 		} else if (event.type === "turn_start") {
-			// CarterKit: notify turn boundary state
-			this._carterKit?.onAssistantTurnStart();
-
+			// CarterKit turn start already handled above (before early return)
 			const extensionEvent: TurnStartEvent = {
 				type: "turn_start",
 				turnIndex: this._turnIndex,
@@ -476,32 +513,7 @@ export class AgentSession {
 			};
 			await this._extensionRunner.emit(extensionEvent);
 		} else if (event.type === "turn_end") {
-			// CarterKit: generate turn boundary messages and inject into message array
-			if (this._carterKit) {
-				// Collect messages from this turn (assistant + tool results)
-				// Cast is safe: AgentMessage = Message | CustomMessages, we're using base Message types
-				const turnMessages = [event.message, ...event.toolResults] as unknown as import("@punkin-pi/ai").Message[];
-				const [turnStart, turnEnd] = this._carterKit.onAssistantTurnEnd(turnMessages);
-
-				// Inject turn boundaries into the message array for LLM context
-				// Find the assistant message in the array (should be near the end)
-				const messages = this.agent.state.messages;
-				const assistantIdx = messages.findIndex((m) => m === event.message);
-				if (assistantIdx !== -1) {
-					// Insert turnStart before the assistant message
-					messages.splice(assistantIdx, 0, turnStart as unknown as AgentMessage);
-					// Append turnEnd at the end (after tool results which are already there)
-					messages.push(turnEnd as unknown as AgentMessage);
-				}
-
-				// Persist turn boundaries to session JSONL
-				this.sessionManager.appendTurnBoundary(turnStart);
-				this.sessionManager.appendTurnBoundary(turnEnd);
-
-				// Emit turn boundary event for TUI rendering
-				this._emit({ type: "turn_boundary", turnStart, turnEnd });
-			}
-
+			// CarterKit turn boundary injection already handled above (before early return)
 			const extensionEvent: TurnEndEvent = {
 				type: "turn_end",
 				turnIndex: this._turnIndex,
