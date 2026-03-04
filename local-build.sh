@@ -46,11 +46,13 @@ chmod +x "$BUILDS_DIR/$BINARY_NAME"
 cp dist/punkin "$BUILDS_DIR/punkin"
 chmod +x "$BUILDS_DIR/punkin"
 
-# macOS: ad-hoc sign to avoid quarantine/Gatekeeper issues
+# macOS: clear xattrs and ad-hoc sign to avoid quarantine/Gatekeeper issues
 if [[ "$(uname -s)" == "Darwin" ]]; then
-    echo "==> Signing binaries (ad-hoc)..."
-    codesign -s - "$BUILDS_DIR/$BINARY_NAME"
-    codesign -s - "$BUILDS_DIR/punkin"
+    echo "==> Clearing xattrs and signing binaries (ad-hoc)..."
+    xattr -c "$BUILDS_DIR/$BINARY_NAME"
+    xattr -c "$BUILDS_DIR/punkin"
+    codesign --force --sign - "$BUILDS_DIR/$BINARY_NAME"
+    codesign --force --sign - "$BUILDS_DIR/punkin"
 fi
 
 # Copy supporting assets
@@ -64,3 +66,17 @@ cp package.json "$BUILDS_DIR/" 2>/dev/null || true
 echo "==> Built: $BUILDS_DIR/$BINARY_NAME"
 echo "==> Binary: $BUILDS_DIR/punkin"
 ls -lh "$BUILDS_DIR/punkin"
+
+# Install to ~/.local/bin if --install flag passed
+if [[ "${1:-}" == "--install" ]] || [[ "${1:-}" == "-i" ]]; then
+    INSTALL_DIR="$HOME/.local/bin"
+    mkdir -p "$INSTALL_DIR"
+    echo "==> Installing to $INSTALL_DIR..."
+    cp "$BUILDS_DIR/punkin" "$INSTALL_DIR/punkin"
+    chmod +x "$INSTALL_DIR/punkin"
+    if [[ "$(uname -s)" == "Darwin" ]]; then
+        xattr -c "$INSTALL_DIR/punkin"
+        codesign --force --sign - "$INSTALL_DIR/punkin"
+    fi
+    echo "==> Installed: $INSTALL_DIR/punkin"
+fi
