@@ -76,8 +76,9 @@ export class AssistantMessageComponent extends Container {
 					.slice(i + 1)
 					.some((c) => (c.type === "text" && c.text.trim()) || (c.type === "thinking" && c.thinking.trim()));
 
-				// Collapsible thinking block — never hidden, shows 3-line preview when collapsed
-				const thinkingBlock = new ThinkingBlock(content.thinking.trim(), false, this.markdownTheme);
+				// Collapsible thinking block — never hidden, expanded by default
+				const THINKING_EXPANDED_BY_DEFAULT = true;
+				const thinkingBlock = new ThinkingBlock(content.thinking.trim(), THINKING_EXPANDED_BY_DEFAULT, this.markdownTheme);
 				this.thinkingBlocks.push(thinkingBlock);
 				this.contentContainer.addChild(thinkingBlock);
 

@@ -169,6 +169,16 @@ export class Container implements Component {
 		this.children.push(component);
 	}
 
+	/** Insert a component before another component. If beforeComponent not found, appends at end. */
+	insertChildBefore(component: Component, beforeComponent: Component): void {
+		const index = this.children.indexOf(beforeComponent);
+		if (index !== -1) {
+			this.children.splice(index, 0, component);
+		} else {
+			this.children.push(component);
+		}
+	}
+
 	removeChild(component: Component): void {
 		const index = this.children.indexOf(component);
 		if (index !== -1) {

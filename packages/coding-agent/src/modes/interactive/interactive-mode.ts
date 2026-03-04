@@ -180,6 +180,8 @@ export class InteractiveMode {
 	// Streaming message tracking
 	private streamingComponent: AssistantMessageComponent | undefined = undefined;
 	private streamingMessage: AssistantMessage | undefined = undefined;
+	// Track last assistant component for turn boundary insertion
+	private lastAssistantComponent: AssistantMessageComponent | undefined = undefined;
 
 	// Tool execution tracking: toolCallId -> component
 	private pendingTools = new Map<string, ToolExecutionComponent>();
@@ -2092,6 +2094,7 @@ export class InteractiveMode {
 						this.getMarkdownThemeWithSettings(),
 					);
 					this.streamingMessage = event.message;
+					this.lastAssistantComponent = this.streamingComponent;
 					this.chatContainer.addChild(this.streamingComponent);
 					this.streamingComponent.updateContent(this.streamingMessage);
 					this.ui.requestRender();
@@ -2326,12 +2329,19 @@ export class InteractiveMode {
 			}
 
 			case "turn_boundary": {
-				// Render turn start boundary before the turn content
 				const startComponent = new TurnBoundaryComponent(event.turnStart);
-				this.chatContainer.addChild(startComponent);
-				// Render turn end boundary after the turn content
 				const endComponent = new TurnBoundaryComponent(event.turnEnd);
-				this.chatContainer.addChild(endComponent);
+				
+				if (this.lastAssistantComponent) {
+					// Insert start boundary before the assistant message
+					this.chatContainer.insertChildBefore(startComponent, this.lastAssistantComponent);
+					// End boundary goes after all turn content (at the end)
+					this.chatContainer.addChild(endComponent);
+				} else {
+					// Fallback: append both at end if no assistant tracked
+					this.chatContainer.addChild(startComponent);
+					this.chatContainer.addChild(endComponent);
+				}
 				this.ui.requestRender();
 				break;
 			}

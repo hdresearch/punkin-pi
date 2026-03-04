@@ -1,5 +1,5 @@
 import type { AgentMessage } from "@punkin-pi/agent-core";
-import type { ImageContent, Message, TextContent } from "@punkin-pi/ai";
+import type { ImageContent, Message, TextContent, TurnStartMessage, TurnEndMessage } from "@punkin-pi/ai";
 import { createHash, randomUUID } from "crypto";
 import {
 	appendFileSync,
@@ -133,6 +133,12 @@ export interface CustomMessageEntry<T = unknown> extends SessionEntryBase {
 	display: boolean;
 }
 
+/** Turn boundary entry - marks start/end of assistant turns for audit trail */
+export interface TurnBoundaryEntry extends SessionEntryBase {
+	type: "turn_boundary";
+	boundary: TurnStartMessage | TurnEndMessage;
+}
+
 /** Session entry - has id/parentId for tree structure (returned by "read" methods in SessionManager) */
 export type SessionEntry =
 	| SessionMessageEntry
@@ -143,7 +149,8 @@ export type SessionEntry =
 	| CustomEntry
 	| CustomMessageEntry
 	| LabelEntry
-	| SessionInfoEntry;
+	| SessionInfoEntry
+	| TurnBoundaryEntry;
 
 /** Raw file entry (includes header) */
 export type FileEntry = SessionHeader | SessionEntry;
@@ -378,6 +385,9 @@ export function buildSessionContext(
 	// 3. Emit messages after compaction
 	const messages: AgentMessage[] = [];
 
+	// Collect turn boundaries separately for repositioning after all messages collected
+	const pendingTurnBoundaries: { boundary: TurnStartMessage | TurnEndMessage; turn: number }[] = [];
+
 	const appendMessage = (entry: SessionEntry) => {
 		if (entry.type === "message") {
 			messages.push(entry.message);
@@ -387,6 +397,9 @@ export function buildSessionContext(
 			);
 		} else if (entry.type === "branch_summary" && entry.summary) {
 			messages.push(createBranchSummaryMessage(entry.summary, entry.fromId, entry.timestamp));
+		} else if (entry.type === "turn_boundary") {
+			// Defer turn boundary insertion until all messages collected
+			pendingTurnBoundaries.push({ boundary: entry.boundary, turn: entry.boundary.turn });
 		}
 	};
 
@@ -418,6 +431,48 @@ export function buildSessionContext(
 		// No compaction - emit all messages, handle branch summaries and custom messages
 		for (const entry of path) {
 			appendMessage(entry);
+		}
+	}
+
+	// Reposition turn boundaries: turnStart before its turn's assistant, turnEnd after
+	// Turn boundaries are persisted after messages but need to wrap them
+	if (pendingTurnBoundaries.length > 0) {
+		// Find assistant message indices (turn N = Nth assistant, 1-indexed)
+		const assistantIndices: number[] = [];
+		for (let i = 0; i < messages.length; i++) {
+			if ((messages[i] as { role: string }).role === "assistant") {
+				assistantIndices.push(i);
+			}
+		}
+
+		// Sort boundaries by turn, then by type (turnStart before turnEnd)
+		pendingTurnBoundaries.sort((a, b) => {
+			if (a.turn !== b.turn) return a.turn - b.turn;
+			return a.boundary.role === "turnStart" ? -1 : 1;
+		});
+
+		// Insert in reverse order to preserve indices
+		const toInsert: { index: number; boundary: TurnStartMessage | TurnEndMessage }[] = [];
+		for (const { boundary, turn } of pendingTurnBoundaries) {
+			// Turn is 1-indexed, assistantIndices is 0-indexed array of assistant positions
+			const assistantIdx = assistantIndices[turn - 1];
+			if (assistantIdx !== undefined) {
+				if (boundary.role === "turnStart") {
+					// Insert before assistant message
+					toInsert.push({ index: assistantIdx, boundary });
+				} else {
+					// Insert after last message of this turn (find next assistant or end)
+					const nextAssistantIdx = assistantIndices[turn];
+					const insertAt = nextAssistantIdx !== undefined ? nextAssistantIdx : messages.length;
+					toInsert.push({ index: insertAt, boundary });
+				}
+			}
+		}
+
+		// Sort by index descending so splices don't invalidate later indices
+		toInsert.sort((a, b) => b.index - a.index);
+		for (const { index, boundary } of toInsert) {
+			messages.splice(index, 0, boundary as AgentMessage);
 		}
 	}
 
@@ -864,6 +919,11 @@ export class SessionManager {
 	/** Append a message as child of current leaf, then advance leaf. Returns entry id. */
 	appendMessage(message: Message | CustomMessage | BashExecutionMessage): string {
 		return this._createEntry<SessionMessageEntry>({ type: "message", message });
+	}
+
+	/** Append a turn boundary (start or end) as child of current leaf, then advance leaf. Returns entry id. */
+	appendTurnBoundary(boundary: TurnStartMessage | TurnEndMessage): string {
+		return this._createEntry<TurnBoundaryEntry>({ type: "turn_boundary", boundary });
 	}
 
 	/** Append a thinking level change as child of current leaf, then advance leaf. Returns entry id. */

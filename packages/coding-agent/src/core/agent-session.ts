@@ -476,12 +476,28 @@ export class AgentSession {
 			};
 			await this._extensionRunner.emit(extensionEvent);
 		} else if (event.type === "turn_end") {
-			// CarterKit: generate turn boundary messages and emit for TUI rendering
+			// CarterKit: generate turn boundary messages and inject into message array
 			if (this._carterKit) {
 				// Collect messages from this turn (assistant + tool results)
 				// Cast is safe: AgentMessage = Message | CustomMessages, we're using base Message types
 				const turnMessages = [event.message, ...event.toolResults] as unknown as import("@punkin-pi/ai").Message[];
 				const [turnStart, turnEnd] = this._carterKit.onAssistantTurnEnd(turnMessages);
+
+				// Inject turn boundaries into the message array for LLM context
+				// Find the assistant message in the array (should be near the end)
+				const messages = this.agent.state.messages;
+				const assistantIdx = messages.findIndex((m) => m === event.message);
+				if (assistantIdx !== -1) {
+					// Insert turnStart before the assistant message
+					messages.splice(assistantIdx, 0, turnStart as unknown as AgentMessage);
+					// Append turnEnd at the end (after tool results which are already there)
+					messages.push(turnEnd as unknown as AgentMessage);
+				}
+
+				// Persist turn boundaries to session JSONL
+				this.sessionManager.appendTurnBoundary(turnStart);
+				this.sessionManager.appendTurnBoundary(turnEnd);
+
 				// Emit turn boundary event for TUI rendering
 				this._emit({ type: "turn_boundary", turnStart, turnEnd });
 			}

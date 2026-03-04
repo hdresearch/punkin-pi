@@ -11,6 +11,7 @@
 	"exports": {
 		".": "./dist/index.js",
 		"./appkit": "./dist/backends/appkit/index.js",
+		"./imgui": "./dist/backends/imgui/index.js",
 		"./runtime": "./dist/core/runtime.js"
 	},
 	"scripts": {

@@ -434,9 +434,16 @@ export class Agent {
 
 		const reasoning = this._state.thinkingLevel === "off" ? undefined : this._state.thinkingLevel;
 
+		// SAD: We pass the messages array by reference (no .slice()) so that mutations
+		// in the agent loop (pushing assistant messages, tool results) are visible to
+		// external code that accesses this.state.messages. This is required for turn
+		// boundary injection in agent-session.ts which does reference-equality lookup
+		// on event.message. A copy would make event.message unfindable in state.messages.
+		// Ideally the loop would return its mutations explicitly, but that's a larger refactor.
+		// For now: in-place mutation sadness. 😢
 		const context: AgentContext = {
 			systemPrompt: this._state.systemPrompt,
-			messages: this._state.messages.slice(),
+			messages: this._state.messages,
 			tools: this._state.tools,
 		};
 

@@ -9,8 +9,8 @@ import type { Timestamp } from "@punkin-pi/ai";
 
 import { createHash } from "node:crypto";
 import type { AgentMessage } from "@punkin-pi/agent-core";
-import type { AssistantMessage, BracketId, ImageContent, Message, TextContent } from "@punkin-pi/ai";
-import { type WrapParams, wrapUser } from "@punkin-pi/ai";
+import type { AssistantMessage, BracketId, ImageContent, Message, TextContent, TurnStartMessage, TurnEndMessage } from "@punkin-pi/ai";
+import { type WrapParams, wrapUser, isTurnStart, isTurnEnd } from "@punkin-pi/ai";
 import { wrapWithBracket } from "./carter_kit/turn-bracket.js";
 
 export const COMPACTION_SUMMARY_PREFIX = `The conversation history before this point was compacted into the following summary:
@@ -174,6 +174,58 @@ function extractText(content: string | (TextContent | ImageContent)[]): string {
 }
 
 /**
+ * Format time portion from timestamp for compact display.
+ */
+function formatTime(ts: Timestamp): string {
+	const match = ts.match(/T(\d{2}:\d{2}:\d{2})/);
+	return match ? match[1] : ts;
+}
+
+/**
+ * Format duration in milliseconds to human-readable string.
+ */
+function formatDuration(ms: number): string {
+	if (ms < 1000) return `${ms}ms`;
+	if (ms < 60000) return `${Math.round(ms / 1000)}s`;
+	if (ms < 3600000) return `${Math.round(ms / 60000)}m`;
+	return `${Math.round(ms / 3600000)}h`;
+}
+
+// Arrow codebook for turn boundary indicators
+const ARROWS_OPEN = ["→", "⟶", "⇒", "➔", "➜", "⟹", "↠", "⇢", "⟾", "⤳"] as const;
+const ARROWS_CLOSE = ["←", "⟵", "⇐", "⟸", "↞", "⇠", "⟽", "⤂", "↩", "↤"] as const;
+
+function pickArrow(arr: readonly string[], seed: string): string {
+	// Deterministic pick based on nonce (same nonce = same arrow)
+	let hash = 0;
+	for (let i = 0; i < seed.length; i++) {
+		hash = ((hash << 5) - hash + seed.charCodeAt(i)) | 0;
+	}
+	return arr[Math.abs(hash) % arr.length];
+}
+
+/**
+ * Render TurnStartMessage to bracket notation for LLM context.
+ * Format: [system:turn-open sigil=🐉 nonce=frost-ember-peak t=19:25:46 turn=5]{→}
+ */
+function renderTurnStart(msg: TurnStartMessage): string {
+	const deltaAttr = msg.delta ? ` delta=${msg.delta}` : "";
+	const arrow = pickArrow(ARROWS_OPEN, msg.nonce);
+	return `[system:turn-open sigil=${msg.sigil} nonce=${msg.nonce} t=${formatTime(msg.timestamp)} turn=${msg.turn}${deltaAttr}]{${arrow}}`;
+}
+
+/**
+ * Render TurnEndMessage to bracket notation for LLM context.
+ * Format: [system:turn-close sigil=🐉 nonce=frost-ember-peak h=abc123 delta=12s]{←}
+ */
+function renderTurnEnd(msg: TurnEndMessage): string {
+	const duration = msg.durationMs ? ` duration=${formatDuration(msg.durationMs)}` : "";
+	const tokens = msg.tokenCount ? ` tokens=${msg.tokenCount}` : "";
+	const arrow = pickArrow(ARROWS_CLOSE, msg.nonce);
+	return `[system:turn-close sigil=${msg.sigil} nonce=${msg.nonce} h=${msg.hash}${duration}${tokens}]{${arrow}}`;
+}
+
+/**
  * Check if role increments turn (user-like messages).
  */
 function isTurnIncrementing(role: string): boolean {
@@ -323,6 +375,31 @@ export function convertToLlm(messages: AgentMessage[]): Message[] {
 							),
 						];
 				result.push({ ...m, content: newContent });
+				break;
+			}
+
+			case "turnStart": {
+				// Turn boundaries render as user-role messages with bracket notation
+				// This prevents model mimicry — boundaries come from "outside"
+				const rendered = renderTurnStart(m as TurnStartMessage);
+				result.push({
+					role: "user",
+					content: [{ type: "text", text: rendered }],
+					timestamp: m.timestamp,
+					endTimestamp: m.timestamp,
+				});
+				break;
+			}
+
+			case "turnEnd": {
+				// Turn end boundary — matches the turn start
+				const rendered = renderTurnEnd(m as TurnEndMessage);
+				result.push({
+					role: "user",
+					content: [{ type: "text", text: rendered }],
+					timestamp: m.timestamp,
+					endTimestamp: m.timestamp,
+				});
 				break;
 			}
 		}

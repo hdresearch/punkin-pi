@@ -1,0 +1,171 @@
+%!TEX program = lualatex
+\documentclass[border=10pt]{standalone}
+\usepackage{tikz}
+\usepackage{luacode}
+\usepackage{xcolor}
+
+% Punkin Pi color scheme
+\definecolor{punkinOrange}{RGB}{255, 140, 0}
+\definecolor{punkinDark}{RGB}{30, 30, 30}
+\definecolor{punkinGray}{RGB}{60, 60, 60}
+\definecolor{punkinLight}{RGB}{200, 200, 200}
+\definecolor{punkinGreen}{RGB}{0, 200, 100}
+\definecolor{punkinBlue}{RGB}{0, 150, 255}
+\definecolor{punkinCard}{RGB}{45, 45, 45}
+\definecolor{punkinCardUser}{RGB}{50, 60, 70}
+\definecolor{punkinSidebar}{RGB}{35, 35, 35}
+\definecolor{punkinInput}{RGB}{40, 40, 40}
+
+% Styles
+\tikzset{
+    window/.style={
+        fill=punkinDark,
+        draw=punkinGray,
+        very thick,
+        rounded corners=8,
+    },
+    sidebar/.style={
+        fill=punkinSidebar,
+        rounded corners=4,
+    },
+    card/.style={
+        fill=punkinCard,
+        rounded corners=4,
+    },
+    cardUser/.style={
+        fill=punkinCardUser,
+        rounded corners=4,
+    },
+    button/.style={
+        fill=punkinOrange,
+        text=white,
+        rounded corners=4,
+        minimum height=8pt,
+        inner sep=4pt,
+    },
+    input/.style={
+        fill=punkinInput,
+        rounded corners=4,
+        inner sep=4pt,
+    },
+    lbl/.style={
+        text=punkinLight,
+        font=\sffamily,
+    },
+    textDim/.style={
+        text=punkinLight!60,
+        font=\sffamily\small,
+    },
+    code/.style={
+        text=punkinBlue,
+        font=\ttfamily\small,
+    },
+    thinking/.style={
+        fill=punkinGray!30,
+        dashed,
+        rounded corners=4,
+    },
+}
+
+\begin{document}
+\begin{luacode*}
+-- UI Component helpers
+function rect(x, y, w, h, style)
+    tex.sprint("\\node[" .. style .. "] at (" .. x .. "," .. y .. ") {};")
+end
+
+function label(x, y, text, style)
+    tex.sprint("\\node[" .. style .. "] at (" .. x .. "," .. y .. ") {" .. text .. "};")
+end
+
+function button(x, y, w, h, text)
+    tex.sprint("\\node[button, minimum width=" .. w .. "pt, minimum height=" .. h .. "pt] at (" .. x .. "," .. y .. ") {" .. text .. "};")
+end
+
+function card(x, y, w, h, style, content)
+    tex.sprint("\\node[" .. style .. ", minimum width=" .. w .. "pt, minimum height=" .. h .. "pt, anchor=north west, align=left] at (" .. x .. "," .. y .. ") {" .. content .. "};")
+end
+\end{luacode*}
+
+\begin{tikzpicture}[x=1pt, y=-1pt]
+    % Window frame (1200x800)
+    \fill[window] (0,0) rectangle (1200,800);
+    
+    % Title bar
+    \fill[punkinGray] (0,0) rectangle (1200,40);
+    \node[lbl] at (600,20) {🎃 Punkin Pi — Native UI};
+    
+    % Sidebar (220pt wide)
+    \fill[sidebar] (0,40) rectangle (220,800);
+    
+    % Sidebar header
+    \node[lbl, font=\sffamily\bfseries] at (110,70) {Sessions};
+    \node[button, minimum width=20pt, minimum height=20pt] at (190,70) {+};
+    
+    % Session list
+    \begin{scope}[yshift=40]
+        \node[card, minimum width=200pt, minimum height=24pt, anchor=north west, align=left] at (10,50) {\textcolor{white}{\sffamily Sessions} \hfill \textcolor{punkinLight!60}{\sffamily\small 24}};
+        \node[card, minimum width=200pt, minimum height=24pt, anchor=north west, align=left] at (10,84) {\textcolor{white!60}{\sffamily Architecture} \hfill \textcolor{punkinLight!60}{\sffamily\small 18}};
+        \node[card, minimum width=200pt, minimum height=24pt, anchor=north west, align=left] at (10,118) {\textcolor{white!60}{\sffamily Handle Semantics} \hfill \textcolor{punkinLight!60}{\sffamily\small 7}};
+        \node[card, minimum width=200pt, minimum height=24pt, anchor=north west, align=left] at (10,152) {\textcolor{white!60}{\sffamily Tool Interface} \hfill \textcolor{punkinLight!60}{\sffamily\small 12}};
+        \node[card, minimum width=200pt, minimum height=24pt, anchor=north west, align=left] at (10,186) {\textcolor{white!60}{\sffamily Context DSL} \hfill \textcolor{punkinLight!60}{\sffamily\small 9}};
+    \end{scope}
+    
+    % Status bar at bottom of sidebar
+    \fill[punkinGray!50] (0,750) rectangle (220,800);
+    \node[textDim] at (110,775) {\textcolor{punkinGreen}{●} Connected};
+    
+    % Main content area
+    % Conversation messages
+    \node[cardUser, minimum width=500pt, minimum height=60pt, anchor=north west, align=left] at (240,70) {
+        \textcolor{punkinLight}{\sffamily\bfseries You} \\
+        \textcolor{punkinLight}{\sffamily Can you help me understand the punkin-pi architecture?}
+    };
+    
+    \node[card, minimum width=500pt, minimum height=140pt, anchor=north west, align=left] at (240,150) {
+        \textcolor{punkinLight}{\sffamily\bfseries Assistant} \\
+        \textcolor{punkinLight}{\sffamily I'd be happy to explain! Punkin Pi has a clean separation:} \\
+        \textcolor{punkinLight}{\sffamily • Agent — The brain: LLM calls, tool execution} \\
+        \textcolor{punkinLight}{\sffamily • GUI App — Pure logic: State, Msg, update, view} \\
+        \textcolor{punkinLight}{\sffamily • GUI Driver — Native rendering: AppKit via koffi}
+    };
+    
+    % Thinking block (dashed)
+    \fill[thinking] (250,200) rectangle (730,240);
+    \node[code, anchor=north west] at (255,205) {
+        \textcolor{punkinLight!70}{-- thinking:}\\
+        \textcolor{punkinLight!70}{Carter wants architecture overview.}\\
+        \textcolor{punkinLight!70}{Focus on separation of pure/effectful.}
+    };
+    
+    % Tool call result
+    \node[card, minimum width=500pt, minimum height=100pt, anchor=north west, align=left] at (240,310) {
+        \textcolor{punkinBlue}{\ttfamily bash} \textcolor{punkinLight}{\ttfamily complete} \\
+        \textcolor{punkinLight}{\ttfamily punkin-pi/}\\
+        \textcolor{punkinLight}{\ttfamily ├── packages/}\\
+        \textcolor{punkinLight}{\ttfamily │   ├── agent/}\\
+        \textcolor{punkinLight}{\ttfamily │   ├── ai/}\\
+        \textcolor{punkinLight}{\ttfamily │   └── native-ui/}
+    };
+    
+    % Handle reference
+    \node[input, minimum width=200pt, minimum height=20pt] at (340,430) {\textcolor{punkinLight!60}{\sffamily\small §h42 • directory listing}};
+    
+    % Input area at bottom
+    \fill[punkinInput] (220,720) rectangle (1200,800);
+    \fill[input] (240,740) rectangle (1100,780);
+    \node[textDim, anchor=west] at (250,760) {Type a message...};
+    \node[button, minimum width=40pt, minimum height=40pt] at (1150,760) {↑};
+    
+    % Annotations
+    \node[textDim, font=\sffamily\scriptsize, align=center] at (110,450) {
+        Sidebar \\
+        220pt
+    };
+    \node[textDim, font=\sffamily\scriptsize, align=center] at (600,850) {
+        Main Content (fills remaining space) \\
+        Scroll area + fixed input bar
+    };
+\end{tikzpicture}
+
+\end{document}

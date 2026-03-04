@@ -195,6 +195,7 @@ export {
 	SessionManager,
 	type SessionMessageEntry,
 	type ThinkingLevelChangeEntry,
+	type TurnBoundaryEntry,
 } from "./core/session-manager.js";
 export {
 	type CompactionSettings,

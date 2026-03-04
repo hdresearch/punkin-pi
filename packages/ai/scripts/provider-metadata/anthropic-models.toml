@@ -1,0 +1,453 @@
+# Anthropic Model Capabilities Registry
+# Generated from official Anthropic docs, 2026-03-03
+# Source: platform.claude.com/docs
+#
+# This file defines model capabilities and required beta headers.
+# Use for generate-models.ts to produce accurate model metadata.
+
+[meta]
+version = "1"
+generated = "2026-03-03T23:15:00-05:00"
+source = "platform.claude.com/docs"
+
+# =============================================================================
+# BETA HEADERS
+# =============================================================================
+# All known Anthropic beta headers with descriptions
+
+[beta_headers]
+"prompt-caching-2024-07-31" = "Prompt caching"
+"pdfs-2024-09-25" = "PDF input support"
+"message-batches-2024-09-24" = "Batch message processing"
+"computer-use-2024-10-22" = "Computer use v1 (legacy, Sonnet 3.7 only)"
+"token-counting-2024-11-01" = "Token counting endpoint"
+"computer-use-2025-01-24" = "Computer use v2"
+"fast-mode-2026-02-01" = "Fast mode (research preview, 6x pricing)"
+"token-efficient-tools-2025-02-19" = "Optimized tool token usage"
+"output-128k-2025-02-19" = "128K output tokens"
+"mcp-client-2025-04-04" = "MCP client v1"
+"extended-cache-ttl-2025-04-11" = "1-hour cache TTL"
+"files-api-2025-04-14" = "Files API"
+"dev-full-thinking-2025-05-14" = "Full thinking visibility (dev only)"
+"interleaved-thinking-2025-05-14" = "Interleaved thinking blocks"
+"code-execution-2025-05-22" = "Code execution sandbox"
+"context-management-2025-06-27" = "Context management API"
+"context-1m-2025-08-07" = "1M token context window (tier 4+)"
+"model-context-window-exceeded-2025-08-26" = "Graceful context overflow"
+"skills-2025-10-02" = "Skills API"
+"mcp-client-2025-11-20" = "MCP client v2"
+"computer-use-2025-11-24" = "Computer use v3 (latest)"
+
+# =============================================================================
+# CORE API PARAMETERS
+# =============================================================================
+# Parameters supported by all Anthropic models
+
+[core_parameters]
+supported = [
+  "temperature",      # 0.0-1.0, default 1.0
+  "top_p",            # 0.0-1.0, nucleus sampling
+  "top_k",            # undocumented but works
+  "max_tokens",       # required, model-dependent max
+  "stop_sequences",   # custom stop strings
+  "stream",           # SSE streaming
+  "system",           # system prompt
+  "tools",            # tool definitions
+  "tool_choice",      # tool selection preference
+  "metadata",         # request metadata
+]
+
+not_supported = [
+  "frequency_penalty",
+  "presence_penalty",
+  "repetition_penalty",
+  "min_p",
+  "seed",
+  "logprobs",
+  "logit_bias",
+]
+
+# =============================================================================
+# MODELS
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Claude Opus 4.6
+# -----------------------------------------------------------------------------
+[models."claude-opus-4-6"]
+aliases = ["claude-opus-4-6"]
+name = "Claude Opus 4.6"
+family = "opus"
+generation = "4.6"
+
+context_window = 200000
+context_window_beta = 1000000  # with context-1m header
+max_output = 128000
+
+# Thinking configuration
+thinking_mode = "adaptive"      # "adaptive" | "manual" | "none"
+thinking_manual_deprecated = true
+interleaved_thinking = "auto"   # "auto" | "header" | "none"
+
+# Beta headers this model supports
+supported_betas = [
+  "context-1m-2025-08-07",
+  "output-128k-2025-02-19",
+  "fast-mode-2026-02-01",
+  "computer-use-2025-11-24",
+  "files-api-2025-04-14",
+  "code-execution-2025-05-22",
+  "mcp-client-2025-11-20",
+  "prompt-caching-2024-07-31",
+  "extended-cache-ttl-2025-04-11",
+  "pdfs-2024-09-25",
+  "token-efficient-tools-2025-02-19",
+  "skills-2025-10-02",
+]
+
+# Headers that are deprecated/ignored on this model
+deprecated_betas = [
+  "interleaved-thinking-2025-05-14",  # auto with adaptive, ignored if sent
+]
+
+computer_use_version = "computer_20251124"
+
+# Pricing ($/million tokens)
+[models."claude-opus-4-6".pricing]
+input = 5.0
+output = 25.0
+cache_read = 0.5
+cache_write = 6.25
+# Long context (>200K) pricing
+input_long = 10.0
+output_long = 37.5
+
+# -----------------------------------------------------------------------------
+# Claude Sonnet 4.6
+# -----------------------------------------------------------------------------
+[models."claude-sonnet-4-6"]
+aliases = ["claude-sonnet-4-6"]
+name = "Claude Sonnet 4.6"
+family = "sonnet"
+generation = "4.6"
+
+context_window = 200000
+context_window_beta = 1000000
+max_output = 64000
+
+thinking_mode = "both"          # supports both adaptive and manual
+thinking_manual_deprecated = false
+interleaved_thinking = "header" # requires header for manual mode, auto for adaptive
+
+supported_betas = [
+  "context-1m-2025-08-07",
+  "interleaved-thinking-2025-05-14",
+  "computer-use-2025-11-24",
+  "files-api-2025-04-14",
+  "code-execution-2025-05-22",
+  "mcp-client-2025-11-20",
+  "prompt-caching-2024-07-31",
+  "extended-cache-ttl-2025-04-11",
+  "pdfs-2024-09-25",
+  "token-efficient-tools-2025-02-19",
+  "skills-2025-10-02",
+]
+
+computer_use_version = "computer_20251124"
+
+[models."claude-sonnet-4-6".pricing]
+input = 3.0
+output = 15.0
+cache_read = 0.3
+cache_write = 3.75
+input_long = 6.0
+output_long = 22.5
+
+# -----------------------------------------------------------------------------
+# Claude Opus 4.5
+# -----------------------------------------------------------------------------
+[models."claude-opus-4-5-20251101"]
+aliases = ["claude-opus-4-5"]
+name = "Claude Opus 4.5"
+family = "opus"
+generation = "4.5"
+
+context_window = 200000
+context_window_beta = 200000    # no 1M support
+max_output = 64000
+
+thinking_mode = "manual"
+interleaved_thinking = "header"
+
+supported_betas = [
+  "interleaved-thinking-2025-05-14",
+  "computer-use-2025-11-24",
+  "files-api-2025-04-14",
+  "code-execution-2025-05-22",
+  "prompt-caching-2024-07-31",
+  "pdfs-2024-09-25",
+]
+
+computer_use_version = "computer_20251124"
+
+[models."claude-opus-4-5-20251101".pricing]
+input = 5.0
+output = 25.0
+cache_read = 0.5
+cache_write = 6.25
+
+# -----------------------------------------------------------------------------
+# Claude Sonnet 4.5
+# -----------------------------------------------------------------------------
+[models."claude-sonnet-4-5-20250929"]
+aliases = ["claude-sonnet-4-5"]
+name = "Claude Sonnet 4.5"
+family = "sonnet"
+generation = "4.5"
+
+context_window = 200000
+context_window_beta = 1000000
+max_output = 64000
+
+thinking_mode = "manual"
+interleaved_thinking = "header"
+
+supported_betas = [
+  "context-1m-2025-08-07",
+  "interleaved-thinking-2025-05-14",
+  "computer-use-2025-01-24",
+  "files-api-2025-04-14",
+  "code-execution-2025-05-22",
+  "prompt-caching-2024-07-31",
+  "pdfs-2024-09-25",
+]
+
+computer_use_version = "computer_20250124"
+
+[models."claude-sonnet-4-5-20250929".pricing]
+input = 3.0
+output = 15.0
+cache_read = 0.3
+cache_write = 3.75
+input_long = 6.0
+output_long = 22.5
+
+# -----------------------------------------------------------------------------
+# Claude Haiku 4.5
+# -----------------------------------------------------------------------------
+[models."claude-haiku-4-5-20251001"]
+aliases = ["claude-haiku-4-5"]
+name = "Claude Haiku 4.5"
+family = "haiku"
+generation = "4.5"
+
+context_window = 200000
+context_window_beta = 200000    # no 1M support
+max_output = 64000
+
+thinking_mode = "manual"
+interleaved_thinking = "none"   # not supported
+
+supported_betas = [
+  "computer-use-2025-01-24",
+  "files-api-2025-04-14",
+  "code-execution-2025-05-22",
+  "prompt-caching-2024-07-31",
+  "pdfs-2024-09-25",
+]
+
+computer_use_version = "computer_20250124"
+
+[models."claude-haiku-4-5-20251001".pricing]
+input = 1.0
+output = 5.0
+cache_read = 0.1
+cache_write = 1.25
+
+# -----------------------------------------------------------------------------
+# Claude Opus 4.1
+# -----------------------------------------------------------------------------
+[models."claude-opus-4-1-20250805"]
+aliases = ["claude-opus-4-1"]
+name = "Claude Opus 4.1"
+family = "opus"
+generation = "4.1"
+
+context_window = 200000
+context_window_beta = 200000
+max_output = 64000
+
+thinking_mode = "manual"
+interleaved_thinking = "header"
+
+supported_betas = [
+  "interleaved-thinking-2025-05-14",
+  "computer-use-2025-01-24",
+  "code-execution-2025-05-22",
+  "prompt-caching-2024-07-31",
+  "pdfs-2024-09-25",
+]
+
+computer_use_version = "computer_20250124"
+
+[models."claude-opus-4-1-20250805".pricing]
+input = 5.0
+output = 25.0
+cache_read = 0.5
+cache_write = 6.25
+
+# -----------------------------------------------------------------------------
+# Claude Sonnet 4
+# -----------------------------------------------------------------------------
+[models."claude-sonnet-4-20250514"]
+aliases = ["claude-sonnet-4", "claude-sonnet-4-0"]
+name = "Claude Sonnet 4"
+family = "sonnet"
+generation = "4.0"
+
+context_window = 200000
+context_window_beta = 1000000
+max_output = 64000
+
+thinking_mode = "manual"
+interleaved_thinking = "header"
+
+supported_betas = [
+  "context-1m-2025-08-07",
+  "interleaved-thinking-2025-05-14",
+  "computer-use-2025-01-24",
+  "prompt-caching-2024-07-31",
+  "pdfs-2024-09-25",
+]
+
+computer_use_version = "computer_20250124"
+
+[models."claude-sonnet-4-20250514".pricing]
+input = 3.0
+output = 15.0
+cache_read = 0.3
+cache_write = 3.75
+input_long = 6.0
+output_long = 22.5
+
+# -----------------------------------------------------------------------------
+# Claude Opus 4
+# -----------------------------------------------------------------------------
+[models."claude-opus-4-20250514"]
+aliases = ["claude-opus-4", "claude-opus-4-0"]
+name = "Claude Opus 4"
+family = "opus"
+generation = "4.0"
+
+context_window = 200000
+context_window_beta = 200000
+max_output = 64000
+
+thinking_mode = "manual"
+interleaved_thinking = "header"
+
+supported_betas = [
+  "interleaved-thinking-2025-05-14",
+  "computer-use-2025-01-24",
+  "prompt-caching-2024-07-31",
+  "pdfs-2024-09-25",
+]
+
+computer_use_version = "computer_20250124"
+
+[models."claude-opus-4-20250514".pricing]
+input = 5.0
+output = 25.0
+cache_read = 0.5
+cache_write = 6.25
+
+# -----------------------------------------------------------------------------
+# Claude Sonnet 3.7 (DEPRECATED)
+# -----------------------------------------------------------------------------
+[models."claude-3-7-sonnet-20250219"]
+aliases = ["claude-3-7-sonnet"]
+name = "Claude Sonnet 3.7"
+family = "sonnet"
+generation = "3.7"
+deprecated = true
+
+context_window = 200000
+context_window_beta = 200000
+max_output = 64000
+
+thinking_mode = "manual"
+thinking_output = "full"        # not summarized like Claude 4
+interleaved_thinking = "none"   # not supported
+
+supported_betas = [
+  "computer-use-2025-01-24",
+  "computer-use-2024-10-22",    # legacy version also works
+  "prompt-caching-2024-07-31",
+  "pdfs-2024-09-25",
+]
+
+computer_use_version = "computer_20250124"
+
+[models."claude-3-7-sonnet-20250219".pricing]
+input = 3.0
+output = 15.0
+cache_read = 0.3
+cache_write = 3.75
+
+# =============================================================================
+# COMPUTER USE TOOL VERSIONS
+# =============================================================================
+
+[computer_use_versions]
+"computer_20251124" = {
+  beta_header = "computer-use-2025-11-24",
+  models = ["claude-opus-4-6", "claude-sonnet-4-6", "claude-opus-4-5-20251101"],
+  features = ["zoom_action", "enhanced_mouse"],
+}
+
+"computer_20250124" = {
+  beta_header = "computer-use-2025-01-24",
+  models = ["claude-sonnet-4-5-20250929", "claude-haiku-4-5-20251001", "claude-opus-4-1-20250805", "claude-sonnet-4-20250514", "claude-opus-4-20250514", "claude-3-7-sonnet-20250219"],
+  features = ["left_mouse_down", "left_mouse_up", "modifier_keys"],
+}
+
+"computer_20241022" = {
+  beta_header = "computer-use-2024-10-22",
+  models = ["claude-3-7-sonnet-20250219"],
+  features = [],
+  legacy = true,
+}
+
+# =============================================================================
+# THINKING MODE REFERENCE
+# =============================================================================
+# 
+# thinking_mode:
+#   "adaptive" - Claude decides when/how much to think (Opus 4.6, Sonnet 4.6)
+#   "manual"   - Requires explicit budget_tokens
+#   "both"     - Supports both adaptive and manual (Sonnet 4.6)
+#   "none"     - No extended thinking
+#
+# interleaved_thinking:
+#   "auto"   - Automatically enabled with adaptive thinking (Opus 4.6)
+#   "header" - Requires interleaved-thinking-2025-05-14 beta header
+#   "none"   - Not supported (Haiku 4.5, Sonnet 3.7)
+#
+# thinking_output:
+#   "summarized" - Default for Claude 4+ (thinking is summarized)
+#   "full"       - Full thinking output (Sonnet 3.7, or with dev-full-thinking header)
+
+# =============================================================================
+# USAGE EXAMPLE
+# =============================================================================
+# 
+# To use in generate-models.ts:
+#
+#   import { parse } from '@iarna/toml';
+#   const config = parse(fs.readFileSync('anthropic-models.toml', 'utf8'));
+#   
+#   for (const [id, model] of Object.entries(config.models)) {
+#     const supportedBetas = model.supported_betas || [];
+#     const thinkingFormat = model.thinking_mode === 'adaptive' ? 'adaptive' : 'manual';
+#     // ... generate model definition
+#   }

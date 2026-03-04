@@ -385,7 +385,15 @@ export interface WrapParams {
 
 /**
  * Wrap user content with boundary.
- * Format: <user sigil="..." nonce="..." t="..." turn="N" delta="..." h="...">content</user>
+ * 
+ * Matched pairs: sigil+nonce appear on BOTH open and close tags for verification.
+ * - Open tag: identity (sigil, nonce) + start metadata (timestamp, turn, delta)
+ * - Close tag: identity (sigil, nonce) + computed metadata (hash)
+ * 
+ * Format:
+ *   <user sigil="..." nonce="..." t="..." turn="N" delta="...">
+ *   content
+ *   </user sigil="..." nonce="..." h="...">
  */
 export function wrapUser(content: string, params: WrapParams): string {
 	const s = pick(USER_SIGILS);
@@ -393,12 +401,22 @@ export function wrapUser(content: string, params: WrapParams): string {
 	const hash = sha3Trunc(content);
 	const deltaAttr = params.delta ? ` delta="${params.delta}"` : "";
 
-	return `<user sigil="${s}" nonce="${n}" t="${params.timestamp}" turn="${params.turn}"${deltaAttr} h="${hash}">\n${content}\n</user>`;
+	const open = `<user sigil="${s}" nonce="${n}" t="${params.timestamp}" turn="${params.turn}"${deltaAttr}>`;
+	const close = `</user sigil="${s}" nonce="${n}" h="${hash}">`;
+	return `${open}\n${content}\n${close}`;
 }
 
 /**
  * Wrap assistant content with boundary.
- * Format: <assistant sigil="..." nonce="..." t="..." turn="N" delta="..." h="...">content</assistant>
+ * 
+ * Matched pairs: sigil+nonce appear on BOTH open and close tags for verification.
+ * - Open tag: identity (sigil, nonce) + start metadata (timestamp, turn, delta)
+ * - Close tag: identity (sigil, nonce) + computed metadata (hash)
+ * 
+ * Format:
+ *   <assistant sigil="..." nonce="..." t="..." turn="N" delta="...">
+ *   content
+ *   </assistant sigil="..." nonce="..." h="...">
  */
 export function wrapAssistant(content: string, params: WrapParams): string {
 	const s = pick(ASSISTANT_SIGILS);
@@ -406,7 +424,9 @@ export function wrapAssistant(content: string, params: WrapParams): string {
 	const hash = sha3Trunc(content);
 	const deltaAttr = params.delta ? ` delta="${params.delta}"` : "";
 
-	return `<assistant sigil="${s}" nonce="${n}" t="${params.timestamp}" turn="${params.turn}"${deltaAttr} h="${hash}">\n${content}\n</assistant>`;
+	const open = `<assistant sigil="${s}" nonce="${n}" t="${params.timestamp}" turn="${params.turn}"${deltaAttr}>`;
+	const close = `</assistant sigil="${s}" nonce="${n}" h="${hash}">`;
+	return `${open}\n${content}\n${close}`;
 }
 
 // =============================================================================
