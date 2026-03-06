@@ -361,16 +361,10 @@ export function convertToLlm(messages: AgentMessage[]): Message[] {
 				break;
 
 			case "assistant": {
-				// Replace all text/thinking with single wrapped text block, keep toolCalls
-				const toolCalls = m.content.filter((c) => c.type === "toolCall");
-				const newContent = wrapped
-					? [{ type: "text" as const, text: wrapped }, ...toolCalls]
-					: [
-							...m.content.map((c) =>
-								c.type === "thinking" ? { type: "thinking" as const, thinking: c.thinking } : c,
-							),
-						];
-				result.push({ ...m, content: newContent });
+				// Pass through unchanged — no wrapping, preserve thinking blocks with signatures
+				// The role already identifies this as assistant; wrapping with <assistant> tags
+				// causes the model to echo the pattern and destroys thinking block signatures
+				result.push(m);
 				break;
 			}
 

@@ -219,7 +219,8 @@ async function streamAssistantResponse(
 	const llmMessages = await config.convertToLlm(messages);
 
 	// Get bracket prefill — open tag for LLM to see, bracketId stored on message for render-time wrapping
-	const prefill = config.getPrefill?.();
+	// const prefill = config.getPrefill?.();
+	const prefill={} ;
 
 	// Build LLM context
 	const llmContext: Context = {
@@ -288,7 +289,7 @@ async function streamAssistantResponse(
 					...finalMessage,
 					submittedAt,
 					...(firstContentMs !== undefined ? { ttftMs: firstContentMs - submittedMs } : {}),
-					...(prefill?.bracketId ? { bracketId: prefill.bracketId } : {}),
+					...{}
 				};
 
 				if (addedPartial) {
