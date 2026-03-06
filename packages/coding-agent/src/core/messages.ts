@@ -361,10 +361,28 @@ export function convertToLlm(messages: AgentMessage[]): Message[] {
 				break;
 
 			case "assistant": {
-				// Pass through unchanged — no wrapping, preserve thinking blocks with signatures
-				// The role already identifies this as assistant; wrapping with <assistant> tags
-				// causes the model to echo the pattern and destroys thinking block signatures
-				result.push(m);
+				// Merge thinking into text with squiggle tags — no <assistant> wrapper
+				// Model sees prior reasoning in squiggle format
+				const toolCalls = m.content.filter((c) => c.type === "toolCall");
+				const thinking = m.content
+					.filter((c): c is { type: "thinking"; thinking: string } => c.type === "thinking")
+					.map((c) => c.thinking);
+				const text = m.content
+					.filter((c): c is { type: "text"; text: string } => c.type === "text")
+					.map((c) => c.text);
+
+				// Wrap thinking in squiggle, then append text
+				const parts: string[] = [];
+				if (thinking.length > 0) {
+					parts.push(`<squiggle>\n${thinking.join("\n")}\n</squiggle>`);
+				}
+				parts.push(...text);
+				const combined = parts.join("\n");
+
+				const newContent = combined.trim()
+					? [{ type: "text" as const, text: combined }, ...toolCalls]
+					: [...toolCalls];
+				result.push({ ...m, content: newContent });
 				break;
 			}
 
