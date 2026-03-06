@@ -291,6 +291,10 @@ export class AgentSession {
 			: undefined;
 		this._carterKit = createCarterKitHook(carterKitStorePath, this.sessionManager.getSessionId());
 
+		// Initialize turn counter from persisted session history
+		// This reconstructs the global turn number so new turns resume from where we left off
+		this._carterKit.initializeTurnCounterFromEntries(this.sessionManager.getEntries());
+
 		// Turn brackets disabled — prefill mechanism was causing model to continue
 		// bracket patterns in its output. Brackets are now added post-hoc in convertToLlm.
 		// TODO: Re-enable with simpler non-prefill approach if needed.
@@ -480,9 +484,10 @@ export class AgentSession {
 			console.error(`[TURN-BOUNDARY-DEBUG] FAILED: could not find assistant message in state.messages`);
 		}
 
-		// Persist turn boundaries to session JSONL
-		this.sessionManager.appendTurnBoundary(turnStart);
-		this.sessionManager.appendTurnBoundary(turnEnd);
+		// Persist turn boundaries to session JSONL with turn number
+		const turnNumber = turnStart.turn;
+		this.sessionManager.appendTurnBoundary(turnStart, turnNumber);
+		this.sessionManager.appendTurnBoundary(turnEnd, turnNumber);
 
 		// Emit turn boundary event for TUI rendering
 		this._emit({ type: "turn_boundary", turnStart, turnEnd });

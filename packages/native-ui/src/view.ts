@@ -48,7 +48,8 @@ export type View =
   | { tag: 'spacer' }
   | { tag: 'layer'; child: View; background: Color }
   | { tag: 'sized'; child: View; width?: number; height?: number }
-  | { tag: 'splitV'; top: View; bottom: View; dividerPos?: number }; // vertical split with draggable divider
+  | { tag: 'splitV'; top: View; bottom: View; dividerPos?: number } // vertical split with draggable divider
+  | { tag: 'vibrancy'; child: View; material?: number }; // NSVisualEffectView frosted glass
 
 // ============================================================================
 // Colors
@@ -182,6 +183,13 @@ export const sized = (child: View, opts: { width?: number; height?: number }): V
   child,
   width: opts.width,
   height: opts.height,
+});
+
+/** NSVisualEffectView — frosted glass sidebar/panel material */
+export const vibrancy = (child: View, material = 7 /* sidebar */): View => ({
+  tag: 'vibrancy',
+  child,
+  material,
 });
 
 // ============================================================================

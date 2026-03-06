@@ -313,7 +313,158 @@ export function createAction(callback: (sender: Id) => void): { target: Id; acti
 export function unregisterAction(id: number): void {
   const registered = registeredCallbacks.get(id);
   if (registered) {
-    koffi.unregister(registered);
+    koffi.unregister(registered as Parameters<typeof koffi.unregister>[0]);
     registeredCallbacks.delete(id);
   }
+}
+
+// ============================================================================
+// Menu Bar — HIG requires File/Edit/View/Window/Help
+// ============================================================================
+
+// initWithTitle:action:keyEquivalent: — 3 pointer args after sel
+const msgPPP = libobjc.func('objc_msgSend', 'void*', ['void*', 'void*', 'void*', 'void*', 'void*']);
+
+function makeMenuItem(title: string, action: string, key: string): Id {
+  const item = alloc('NSMenuItem');
+  return msgPPP(item, sel('initWithTitle:action:keyEquivalent:'), nsString(title), action ? sel(action) : null, nsString(key));
+}
+
+function makeMenu(title: string): Id {
+  const menu = alloc('NSMenu');
+  const inited = send(menu, 'initWithTitle:', nsString(title));
+  sendBool(inited, 'setAutoenablesItems:', true);
+  return inited;
+}
+
+function addItem(menu: Id, item: Id): void {
+  send(menu, 'addItem:', item);
+}
+
+function addSeparator(menu: Id): void {
+  const sep = call(cls('NSMenuItem'), 'separatorItem');
+  send(menu, 'addItem:', sep);
+}
+
+function setSubmenu(item: Id, menu: Id): void {
+  send(item, 'setSubmenu:', menu);
+}
+
+function menuItemWithSub(title: string, submenu: Id): Id {
+  const item = makeMenuItem(title, '', '');
+  setSubmenu(item, submenu);
+  return item;
+}
+
+export function createMenuBar(appName: string): void {
+  const app = call(cls('NSApplication'), 'sharedApplication');
+  const mainMenu = makeMenu('');
+
+  // ── App menu ──────────────────────────────────────────────
+  const appMenu = makeMenu(appName);
+  const aboutItem = makeMenuItem(`About ${appName}`, 'orderFrontStandardAboutPanel:', '');
+  addItem(appMenu, aboutItem);
+  addSeparator(appMenu);
+  const hideItem = makeMenuItem(`Hide ${appName}`, 'hide:', 'h');
+  addItem(appMenu, hideItem);
+  const hideOthers = makeMenuItem('Hide Others', 'hideOtherApplications:', 'h');
+  // Opt+Cmd+H for hideOthers
+  sendUInt(hideOthers, 'setKeyEquivalentModifierMask:', (1 << 19) | (1 << 20)); // opt + cmd
+  addItem(appMenu, hideOthers);
+  const showAll = makeMenuItem('Show All', 'unhideAllApplications:', '');
+  addItem(appMenu, showAll);
+  addSeparator(appMenu);
+  const quitItem = makeMenuItem(`Quit ${appName}`, 'terminate:', 'q');
+  addItem(appMenu, quitItem);
+  addItem(mainMenu, menuItemWithSub(appName, appMenu));
+
+  // ── File menu ─────────────────────────────────────────────
+  const fileMenu = makeMenu('File');
+  const newItem = makeMenuItem('New Session', 'newDocument:', 'n');
+  addItem(fileMenu, newItem);
+  addSeparator(fileMenu);
+  const closeItem = makeMenuItem('Close', 'performClose:', 'w');
+  addItem(fileMenu, closeItem);
+  addItem(mainMenu, menuItemWithSub('File', fileMenu));
+
+  // ── Edit menu ─────────────────────────────────────────────
+  const editMenu = makeMenu('Edit');
+  addItem(editMenu, makeMenuItem('Undo', 'undo:', 'z'));
+  addItem(editMenu, makeMenuItem('Redo', 'redo:', 'Z'));
+  addSeparator(editMenu);
+  addItem(editMenu, makeMenuItem('Cut', 'cut:', 'x'));
+  addItem(editMenu, makeMenuItem('Copy', 'copy:', 'c'));
+  addItem(editMenu, makeMenuItem('Paste', 'paste:', 'v'));
+  addItem(editMenu, makeMenuItem('Select All', 'selectAll:', 'a'));
+  addItem(mainMenu, menuItemWithSub('Edit', editMenu));
+
+  // ── View menu ─────────────────────────────────────────────
+  const viewMenu = makeMenu('View');
+  const toggleSidebar = makeMenuItem('Toggle Sidebar', '', 'b');
+  sendUInt(toggleSidebar, 'setKeyEquivalentModifierMask:', 1 << 20); // cmd
+  addItem(viewMenu, toggleSidebar);
+  addSeparator(viewMenu);
+  const fullScreen = makeMenuItem('Enter Full Screen', 'toggleFullScreen:', 'f');
+  sendUInt(fullScreen, 'setKeyEquivalentModifierMask:', (1 << 17) | (1 << 20)); // ctrl + cmd
+  addItem(viewMenu, fullScreen);
+  addItem(mainMenu, menuItemWithSub('View', viewMenu));
+
+  // ── Window menu ───────────────────────────────────────────
+  const windowMenu = makeMenu('Window');
+  addItem(windowMenu, makeMenuItem('Minimize', 'performMiniaturize:', 'm'));
+  addItem(windowMenu, makeMenuItem('Zoom', 'performZoom:', ''));
+  addSeparator(windowMenu);
+  addItem(windowMenu, makeMenuItem('Bring All to Front', 'arrangeInFront:', ''));
+  addItem(mainMenu, menuItemWithSub('Window', windowMenu));
+  send(app, 'setWindowsMenu:', windowMenu);
+
+  // ── Help menu ─────────────────────────────────────────────
+  const helpMenu = makeMenu('Help');
+  addItem(mainMenu, menuItemWithSub('Help', helpMenu));
+
+  send(app, 'setMainMenu:', mainMenu);
+}
+
+// ============================================================================
+// Vibrancy — NSVisualEffectView for sidebar/panel materials
+// ============================================================================
+
+/** NSVisualEffectView materials (macOS 10.14+) */
+export const VibrancyMaterial = {
+  titlebar:        3,
+  selection:       4,
+  menu:            5,
+  popover:         6,
+  sidebar:         7,
+  headerView:      10,
+  sheet:           11,
+  windowBackground:12,
+  hudWindow:       13,
+  fullScreenUI:    15,
+  tooltip:         17,
+  contentBackground: 18,
+  underWindowBackground: 21,
+  underPageBackground:  22,
+} as const;
+
+/** NSVisualEffectBlendingMode */
+export const BlendingMode = {
+  behindWindow:  0,
+  withinWindow:  1,
+} as const;
+
+export function createVibrancyView(
+  child: Id,
+  material: number = VibrancyMaterial.sidebar,
+  blendingMode: number = BlendingMode.behindWindow
+): Id {
+  const vev = init(alloc('NSVisualEffectView'));
+  sendBool(vev, 'setTranslatesAutoresizingMaskIntoConstraints:', false);
+  sendInt(vev, 'setMaterial:', material);
+  sendInt(vev, 'setBlendingMode:', blendingMode);
+  sendInt(vev, 'setState:', 1); // NSVisualEffectStateActive
+
+  send(vev, 'addSubview:', child);
+  pinToParent(child, vev);
+  return vev;
 }

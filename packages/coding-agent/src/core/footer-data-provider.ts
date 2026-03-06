@@ -1,3 +1,4 @@
+import { execSync } from "child_process";
 import { existsSync, type FSWatcher, readFileSync, statSync, watch } from "fs";
 import { dirname, join, resolve } from "path";
 
@@ -96,6 +97,35 @@ export class FooterDataProvider {
 		return this.availableProviderCount;
 	}
 
+	/** Current repo commit hash (short), null if not in repo */
+	getRepoCommit(): string | null {
+		try {
+			return execSync("git rev-parse --short HEAD", {
+				encoding: "utf8",
+				stdio: ["pipe", "pipe", "pipe"],
+			}).trim();
+		} catch {
+			return null;
+		}
+	}
+
+	/** Current repo state: "clean" | "staged" | "dirty", null if not in repo */
+	getRepoState(): "clean" | "staged" | "dirty" | null {
+		try {
+			const status = execSync("git status --porcelain", {
+				encoding: "utf8",
+				stdio: ["pipe", "pipe", "pipe"],
+			}).trim();
+			if (status === "") return "clean";
+			// Check if any lines are unstaged (start with space or ?)
+			const lines = status.split("\n");
+			const hasUnstaged = lines.some((l) => l[0] === " " || l[0] === "?" || l[1] === "M" || l[1] === "D");
+			return hasUnstaged ? "dirty" : "staged";
+		} catch {
+			return null;
+		}
+	}
+
 	/** Internal: update available provider count */
 	setAvailableProviderCount(count: number): void {
 		this.availableProviderCount = count;
@@ -140,5 +170,5 @@ export class FooterDataProvider {
 /** Read-only view for extensions - excludes setExtensionStatus, setAvailableProviderCount and dispose */
 export type ReadonlyFooterDataProvider = Pick<
 	FooterDataProvider,
-	"getGitBranch" | "getExtensionStatuses" | "getAvailableProviderCount" | "onBranchChange"
+	"getGitBranch" | "getExtensionStatuses" | "getAvailableProviderCount" | "onBranchChange" | "getRepoCommit" | "getRepoState"
 >;

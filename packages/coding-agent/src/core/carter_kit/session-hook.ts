@@ -127,6 +127,13 @@ export interface CarterKitHook {
 	// ========================================================================
 
 	/**
+	 * Initialize turn boundary state from persisted session entries.
+	 * Reconstructs the global turn counter from the max turn number in history.
+	 * Call this once when loading a session to resume from where it left off.
+	 */
+	initializeTurnCounterFromEntries(entries: Array<{ type: string; turnNumber?: number }>): void;
+
+	/**
 	 * Called when assistant turn begins. Records start time, assigns sigil/nonce.
 	 */
 	onAssistantTurnStart(): void;
@@ -193,6 +200,18 @@ export function createCarterKitHook(storePath: string | undefined, sessionId: st
 		},
 
 		// Turn boundary methods (new, structural messages)
+		initializeTurnCounterFromEntries(entries: Array<{ type: string; turnNumber?: number }>): void {
+			// Find the maximum turn number in persisted history
+			let maxTurn = 0;
+			for (const entry of entries) {
+				if (entry.type === "turn_boundary" && entry.turnNumber !== undefined) {
+					maxTurn = Math.max(maxTurn, entry.turnNumber);
+				}
+			}
+			// Resume from where we left off
+			_boundaryState.currentTurn = maxTurn;
+		},
+
 		onAssistantTurnStart(): void {
 			boundaryTurnStart(_boundaryState);
 			setSquiggleTurn(_squiggleState, _boundaryState.currentTurn);

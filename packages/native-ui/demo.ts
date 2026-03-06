@@ -6,7 +6,7 @@
  */
 
 import {
-  vstack, hstack, scroll, layer, sized,
+  vstack, hstack, scroll, layer, sized, vibrancy,
   label, bold, code, text,
   input, button, spacer,
   message, thinking, toolCall, handle, sessionItem,
@@ -19,10 +19,10 @@ import { runApp } from './src/render.js';
 // Build the UI — pure data, no effects
 // ============================================================================
 
-const sidebar = layer(
+const sidebar = vibrancy(
   vstack([
-    // Header
-    hstack([bold('Sessions', 14), button('+')], { 
+    // Header — sits below traffic lights
+    hstack([bold('Sessions', 14), spacer, button('+')], { 
       insets: { top: 54, left: 16, bottom: 12, right: 16 } 
     }),
     
@@ -37,13 +37,13 @@ const sidebar = layer(
       ], { spacing: 4, insets: { top: 8, left: 8, bottom: 8, right: 8 } })
     ),
     
-    // Status
+    // Status — pinned to bottom
     hstack([
       label('●', 10, colors.green),
-      label('Connected', 11, colors.textDim),
-    ], { spacing: 6, insets: { top: 12, left: 16, bottom: 16, right: 16 } }),
+      label('claude-3-5-sonnet', 11, colors.textDim),
+    ], { spacing: 6, insets: { top: 12, left: 16, bottom: 20, right: 16 } }),
   ], { spacing: 0 }),
-  colors.sidebar
+  7  // NSVisualEffectMaterialSidebar
 );
 
 const conversation = vstack([

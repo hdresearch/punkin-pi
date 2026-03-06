@@ -49,6 +49,9 @@ export function render(view: View): ffi.Id {
     
     case 'splitV':
       return renderSplitV(render(view.top), render(view.bottom), view.dividerPos);
+    
+    case 'vibrancy':
+      return ffi.createVibrancyView(render(view.child), view.material ?? 7);
   }
 }
 
@@ -258,6 +261,9 @@ export function runApp(title: string, width: number, height: number, content: Vi
   
   // Pin rendered content to fill window
   ffi.pinToParent(rendered, contentView);
+  
+  // HIG: every Mac app needs a menu bar
+  ffi.createMenuBar(title);
   
   ffi.showWindow(win, contentView);
   ffi.runApp();

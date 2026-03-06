@@ -143,7 +143,16 @@ async function runLoop(
 			newMessages.push(message);
 
 			if (message.stopReason === "error" || message.stopReason === "aborted") {
-				stream.push({ type: "turn_end", message, toolResults: [] });
+				// Truly empty = content array is empty (aborted before producing anything)
+				const hasAnyContent = message.content.length > 0;
+
+				// If truly empty abort, skip turn_end — prevents empty brackets in history
+				if (!hasAnyContent && message.stopReason === "aborted") {
+					// No turn_end emitted — empty aborted turn silently dropped
+				} else {
+					stream.push({ type: "turn_end", message, toolResults: [] });
+				}
+
 				stream.push({ type: "agent_end", messages: newMessages });
 				stream.end(newMessages);
 				return;

@@ -159,6 +159,13 @@ export function onTurnEnd(
 		}
 	}
 
+	// Determine if turn has no content at all (truly empty — aborted/error with nothing)
+	// Tool-call-only turns are NOT empty; they did real work
+	const isEmpty = !turnMessages.some((m) => {
+		if (m.role !== "assistant") return false;
+		return m.content.length > 0;
+	});
+
 	const turnStart: TurnStartMessage = {
 		role: "turnStart",
 		turn: state.currentTurn,
@@ -177,6 +184,7 @@ export function onTurnEnd(
 		timestamp: endTimestamp,
 		tokenCount: tokenCount > 0 ? tokenCount : undefined,
 		durationMs,
+		...(isEmpty ? { isEmpty: true } : {}),
 	};
 
 	// Update state for next turn
@@ -232,5 +240,6 @@ export function renderTurnStart(msg: TurnStartMessage): string {
 export function renderTurnEnd(msg: TurnEndMessage): string {
 	const durationStr = msg.durationMs ? ` │ Δt=${Math.round(msg.durationMs / 1000)}s` : "";
 	const tokenStr = msg.tokenCount ? ` │ tokens:${msg.tokenCount}` : "";
-	return `H=${msg.hash}${durationStr}${tokenStr} │ ${msg.nonce} ${msg.sigil}`;
+	const emptyStr = msg.isEmpty ? ` │ (empty)` : "";
+	return `H=${msg.hash}${durationStr}${tokenStr}${emptyStr} │ ${msg.nonce} ${msg.sigil}`;
 }

@@ -1,5 +1,6 @@
 import { type Component, truncateToWidth, visibleWidth } from "@punkin-pi/tui";
 import type { AgentSession } from "../../../core/agent-session.js";
+import { BUILD_COMMIT, BUILD_TIME, VERSION } from "../../../build-info.js";
 import type { ReadonlyFooterDataProvider } from "../../../core/footer-data-provider.js";
 import { theme } from "../theme/theme.js";
 
@@ -96,12 +97,6 @@ export class FooterComponent implements Component {
 		const branch = this.footerData.getGitBranch();
 		if (branch) {
 			pwd = `${pwd} (${branch})`;
-		}
-
-		// Add session name if set
-		const sessionName = this.session.sessionManager.getSessionName();
-		if (sessionName) {
-			pwd = `${pwd} • ${sessionName}`;
 		}
 
 		// Truncate path if too long to fit width
@@ -213,17 +208,61 @@ export class FooterComponent implements Component {
 		const remainder = statsLine.slice(statsLeft.length); // padding + rightSide
 		const dimRemainder = theme.fg("dim", remainder);
 
-		const lines = [theme.fg("dim", pwd), dimStatsLeft + dimRemainder];
+		const lines: string[] = [];
 
-		// Add extension statuses on a single line, sorted by key alphabetically
+		// Line 1: pwd (branch)
+		lines.push(theme.fg("dim", pwd));
+
+		// Line 2: @commit state                               session-name
+		const repoCommit = this.footerData.getRepoCommit();
+		const repoState = this.footerData.getRepoState();
+		const sessionName = this.session.sessionManager.getSessionName();
+		if (repoCommit || sessionName) {
+			let repoLeft = "";
+			if (repoCommit) {
+				const stateLabel = repoState === "clean" ? "clean" : repoState === "staged" ? "staged" : "dirty";
+				repoLeft = `@${repoCommit} ${stateLabel}`;
+			}
+			const repoRight = sessionName || "";
+			const repoLeftWidth = visibleWidth(repoLeft);
+			const repoRightWidth = visibleWidth(repoRight);
+			let repoLine: string;
+			if (repoLeftWidth + 2 + repoRightWidth <= width) {
+				const repoPadding = " ".repeat(width - repoLeftWidth - repoRightWidth);
+				repoLine = repoLeft + repoPadding + repoRight;
+			} else {
+				repoLine = repoLeft || repoRight;
+			}
+			lines.push(theme.fg("dim", repoLine));
+		}
+
+		// Line 3: stats ... model info
+		lines.push(dimStatsLeft + dimRemainder);
+
+		// Line 4: extension statuses (left) + build info (right)
 		const extensionStatuses = this.footerData.getExtensionStatuses();
-		if (extensionStatuses.size > 0) {
-			const sortedStatuses = Array.from(extensionStatuses.entries())
-				.sort(([a], [b]) => a.localeCompare(b))
-				.map(([, text]) => sanitizeStatusText(text));
-			const statusLine = sortedStatuses.join(" ");
-			// Truncate to terminal width with dim ellipsis for consistency with footer style
-			lines.push(truncateToWidth(statusLine, width, theme.fg("dim", "...")));
+		const sortedStatuses = Array.from(extensionStatuses.entries())
+			.sort(([a], [b]) => a.localeCompare(b))
+			.map(([, text]) => sanitizeStatusText(text));
+		const extLeft = sortedStatuses.join(" ");
+
+		// Build info: version commit timestamp
+		const buildInfo = BUILD_COMMIT !== "dev" ? `${VERSION} ${BUILD_COMMIT} ${BUILD_TIME}` : "";
+		if (extLeft || buildInfo) {
+			const extLeftWidth = visibleWidth(extLeft);
+			const buildInfoWidth = visibleWidth(buildInfo);
+			let line4: string;
+			if (extLeftWidth + 2 + buildInfoWidth <= width) {
+				const padding = " ".repeat(width - extLeftWidth - buildInfoWidth);
+				line4 = extLeft + padding + buildInfo;
+			} else if (buildInfo && !extLeft) {
+				// Just build info, right-aligned
+				line4 = " ".repeat(width - buildInfoWidth) + buildInfo;
+			} else {
+				// Just extension statuses
+				line4 = truncateToWidth(extLeft, width, "...");
+			}
+			lines.push(theme.fg("dim", line4));
 		}
 
 		return lines;

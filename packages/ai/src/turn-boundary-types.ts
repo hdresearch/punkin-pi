@@ -50,6 +50,8 @@ export interface TurnEndMessage {
 	tokenCount?: number;
 	/** Turn duration in milliseconds */
 	durationMs?: number;
+	/** True if message has no text/thinking content (only toolCalls or nothing). Clients can suppress rendering. */
+	isEmpty?: boolean;
 }
 
 // ============================================================================

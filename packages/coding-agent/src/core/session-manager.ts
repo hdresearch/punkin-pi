@@ -137,6 +137,8 @@ export interface CustomMessageEntry<T = unknown> extends SessionEntryBase {
 export interface TurnBoundaryEntry extends SessionEntryBase {
 	type: "turn_boundary";
 	boundary: TurnStartMessage | TurnEndMessage;
+	/** Persisted turn number at creation time. Immutable across session reloads. */
+	turnNumber: number;
 }
 
 /** Session entry - has id/parentId for tree structure (returned by "read" methods in SessionManager) */
@@ -398,8 +400,12 @@ export function buildSessionContext(
 		} else if (entry.type === "branch_summary" && entry.summary) {
 			messages.push(createBranchSummaryMessage(entry.summary, entry.fromId, entry.timestamp));
 		} else if (entry.type === "turn_boundary") {
+			// Infer turn number: use persisted turnNumber if available (new entries),
+			// otherwise use boundary.turn (old entries, backwards compat)
+			const tbEntry = entry as typeof entry & { turnNumber?: number };
+			const turn = tbEntry.turnNumber ?? entry.boundary.turn;
 			// Defer turn boundary insertion until all messages collected
-			pendingTurnBoundaries.push({ boundary: entry.boundary, turn: entry.boundary.turn });
+			pendingTurnBoundaries.push({ boundary: entry.boundary, turn });
 		}
 	};
 
@@ -435,7 +441,7 @@ export function buildSessionContext(
 	}
 
 	// Reposition turn boundaries: turnStart before its turn's assistant, turnEnd after
-	// Turn boundaries are persisted after messages but need to wrap them
+	// Turn boundaries are persisted with their turn numbers, which are immutable across loads
 	if (pendingTurnBoundaries.length > 0) {
 		// Find assistant message indices (turn N = Nth assistant, 1-indexed)
 		const assistantIndices: number[] = [];
@@ -467,6 +473,9 @@ export function buildSessionContext(
 					toInsert.push({ index: insertAt, boundary });
 				}
 			}
+			// Note: If assistantIdx is undefined (turn out of range for current context),
+			// the boundary is silently omitted. This can happen with compaction/branches
+			// when old turns are no longer in the active history. Consider logging if needed.
 		}
 
 		// Sort by index descending so splices don't invalidate later indices
@@ -922,8 +931,8 @@ export class SessionManager {
 	}
 
 	/** Append a turn boundary (start or end) as child of current leaf, then advance leaf. Returns entry id. */
-	appendTurnBoundary(boundary: TurnStartMessage | TurnEndMessage): string {
-		return this._createEntry<TurnBoundaryEntry>({ type: "turn_boundary", boundary });
+	appendTurnBoundary(boundary: TurnStartMessage | TurnEndMessage, turnNumber: number): string {
+		return this._createEntry<TurnBoundaryEntry>({ type: "turn_boundary", boundary, turnNumber });
 	}
 
 	/** Append a thinking level change as child of current leaf, then advance leaf. Returns entry id. */
