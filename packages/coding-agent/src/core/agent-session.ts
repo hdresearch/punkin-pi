@@ -494,8 +494,9 @@ export class AgentSession {
 		);
 		const assistantHasContent = event.message.role === "assistant" && event.message.content.length > 0;
 		const hasTurnContent = assistantHasContent || event.toolResults.length > 0;
-		if (assistantIdx === -1 && !hasTurnContent) {
-			// Truly phantom turn: nothing to anchor, nothing useful to show
+		if (!hasTurnContent) {
+			// Empty turn (no assistant content, no tool results): suppress boundaries entirely.
+			// This prevents standalone empty frames in the TUI, especially from aborted Anthropic spikes.
 			return;
 		}
 
