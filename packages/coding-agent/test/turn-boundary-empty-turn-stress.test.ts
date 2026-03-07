@@ -125,17 +125,25 @@ describe("empty-turn and turn-boundary stress", () => {
 		expect(fakeThis._emit).toHaveBeenCalledWith({ type: "turn_boundary", turnStart, turnEnd });
 	});
 
-	test("agent-session: suppresses truly phantom empty turn, but still emits for non-empty unanchored turn", () => {
+	test("agent-session: suppresses empty turns (phantom or anchored), but still emits for non-empty unanchored turn", () => {
 		const [turnStartA, turnEndA] = mkBoundary(1);
 		const [turnStartB, turnEndB] = mkBoundary(2);
+		const [turnStartC, turnEndC] = mkBoundary(3);
+		const anchoredEmpty = mkAssistant({
+			stopReason: "aborted",
+			content: [],
+			timestamp: "2026-03-07T17:00:00.000Z",
+			endTimestamp: "2026-03-07T17:00:01.000Z",
+		});
 		const fakeThis: any = {
 			_carterKit: {
 				onAssistantTurnEnd: vi
 					.fn()
 					.mockReturnValueOnce([turnStartA, turnEndA])
-					.mockReturnValueOnce([turnStartB, turnEndB]),
+					.mockReturnValueOnce([turnStartB, turnEndB])
+					.mockReturnValueOnce([turnStartC, turnEndC]),
 			},
-			agent: { state: { messages: [] as any[] } },
+			agent: { state: { messages: [anchoredEmpty] as any[] } },
 			sessionManager: { appendTurnBoundary: vi.fn() },
 			_emit: vi.fn(),
 		};
@@ -144,6 +152,18 @@ describe("empty-turn and turn-boundary stress", () => {
 		(AgentSession as any).prototype._injectTurnBoundaries.call(fakeThis, {
 			type: "turn_end",
 			message: mkAssistant({ stopReason: "aborted", content: [] }),
+			toolResults: [],
+		});
+
+		// Anchored empty (Anthropic-style aborted spike): still suppressed
+		(AgentSession as any).prototype._injectTurnBoundaries.call(fakeThis, {
+			type: "turn_end",
+			message: mkAssistant({
+				stopReason: "aborted",
+				content: [],
+				timestamp: anchoredEmpty.timestamp,
+				endTimestamp: anchoredEmpty.endTimestamp,
+			}),
 			toolResults: [],
 		});
 
@@ -158,6 +178,6 @@ describe("empty-turn and turn-boundary stress", () => {
 		});
 
 		expect(fakeThis.sessionManager.appendTurnBoundary).toHaveBeenCalledTimes(2);
-		expect(fakeThis._emit).toHaveBeenCalledWith({ type: "turn_boundary", turnStart: turnStartB, turnEnd: turnEndB });
+		expect(fakeThis._emit).toHaveBeenCalledWith({ type: "turn_boundary", turnStart: turnStartC, turnEnd: turnEndC });
 	});
 });
