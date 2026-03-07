@@ -60,6 +60,8 @@ export class ModelSelectorComponent extends Container implements Focusable {
 	private scope: ModelScope = "all";
 	private scopeText?: Text;
 	private scopeHintText?: Text;
+	private favoriteIds: Set<string>;
+	private recentIds: string[];
 
 	constructor(
 		tui: TUI,
@@ -81,6 +83,8 @@ export class ModelSelectorComponent extends Container implements Focusable {
 		this.scope = scopedModels.length > 0 ? "scoped" : "all";
 		this.onSelectCallback = onSelect;
 		this.onCancelCallback = onCancel;
+		this.favoriteIds = new Set(settingsManager.getFavoriteModels());
+		this.recentIds = settingsManager.getRecentModels();
 
 		// Add top border
 		this.addChild(new DynamicBorder());
@@ -95,6 +99,7 @@ export class ModelSelectorComponent extends Container implements Focusable {
 		} else {
 			const hintText = "Only showing models with configured API keys (see README for details)";
 			this.addChild(new Text(theme.fg("warning", hintText), 0, 0));
+			this.addChild(new Text(theme.fg("dim", "Ctrl+F") + theme.fg("muted", " ★ favorite"), 0, 0));
 		}
 		this.addChild(new Spacer(1));
 
@@ -176,14 +181,34 @@ export class ModelSelectorComponent extends Container implements Focusable {
 		this.selectedIndex = Math.min(this.selectedIndex, Math.max(0, this.filteredModels.length - 1));
 	}
 
+	private getFullModelId(item: ModelItem): string {
+		return `${item.provider}/${item.id}`;
+	}
+
 	private sortModels(models: ModelItem[]): ModelItem[] {
 		const sorted = [...models];
-		// Sort: current model first, then by provider
+		// Sort: current → favorites → recents → provider order
 		sorted.sort((a, b) => {
+			const aId = this.getFullModelId(a);
+			const bId = this.getFullModelId(b);
 			const aIsCurrent = modelsAreEqual(this.currentModel, a.model);
 			const bIsCurrent = modelsAreEqual(this.currentModel, b.model);
 			if (aIsCurrent && !bIsCurrent) return -1;
 			if (!aIsCurrent && bIsCurrent) return 1;
+
+			const aIsFav = this.favoriteIds.has(aId);
+			const bIsFav = this.favoriteIds.has(bId);
+			if (aIsFav && !bIsFav) return -1;
+			if (!aIsFav && bIsFav) return 1;
+
+			const aRecentIdx = this.recentIds.indexOf(aId);
+			const bRecentIdx = this.recentIds.indexOf(bId);
+			const aIsRecent = aRecentIdx !== -1;
+			const bIsRecent = bRecentIdx !== -1;
+			if (aIsRecent && !bIsRecent) return -1;
+			if (!aIsRecent && bIsRecent) return 1;
+			if (aIsRecent && bIsRecent) return aRecentIdx - bRecentIdx;
+
 			return a.provider.localeCompare(b.provider);
 		});
 		return sorted;
@@ -196,7 +221,7 @@ export class ModelSelectorComponent extends Container implements Focusable {
 	}
 
 	private getScopeHintText(): string {
-		return keyHint("tab", "scope") + theme.fg("muted", " (all/scoped)");
+		return keyHint("tab", "scope") + theme.fg("muted", " (all/scoped)  ") + theme.fg("dim", "Ctrl+F") + theme.fg("muted", " ★ favorite");
 	}
 
 	private setScope(scope: ModelScope): void {
@@ -235,19 +260,22 @@ export class ModelSelectorComponent extends Container implements Focusable {
 
 			const isSelected = i === this.selectedIndex;
 			const isCurrent = modelsAreEqual(this.currentModel, item.model);
+			const fullId = this.getFullModelId(item);
+			const isFavorite = this.favoriteIds.has(fullId);
 
 			let line = "";
+			const favStar = isFavorite ? theme.fg("warning", "★ ") : "  ";
 			if (isSelected) {
 				const prefix = theme.fg("accent", "→ ");
 				const modelText = `${item.id}`;
 				const providerBadge = theme.fg("muted", `[${item.provider}]`);
 				const checkmark = isCurrent ? theme.fg("success", " ✓") : "";
-				line = `${prefix + theme.fg("accent", modelText)} ${providerBadge}${checkmark}`;
+				line = `${prefix}${favStar}${theme.fg("accent", modelText)} ${providerBadge}${checkmark}`;
 			} else {
-				const modelText = `  ${item.id}`;
+				const modelText = `${item.id}`;
 				const providerBadge = theme.fg("muted", `[${item.provider}]`);
 				const checkmark = isCurrent ? theme.fg("success", " ✓") : "";
-				line = `${modelText} ${providerBadge}${checkmark}`;
+				line = `  ${favStar}${modelText} ${providerBadge}${checkmark}`;
 			}
 
 			this.listContainer.addChild(new Text(line, 0, 0));
@@ -275,8 +303,30 @@ export class ModelSelectorComponent extends Container implements Focusable {
 		}
 	}
 
+	private toggleFavorite(): void {
+		const selected = this.filteredModels[this.selectedIndex];
+		if (!selected) return;
+		const fullId = this.getFullModelId(selected);
+		const nowFavorite = this.settingsManager.toggleFavoriteModel(fullId);
+		if (nowFavorite) {
+			this.favoriteIds.add(fullId);
+		} else {
+			this.favoriteIds.delete(fullId);
+		}
+		// Re-sort and update display
+		this.allModels = this.sortModels(this.allModels);
+		this.scopedModelItems = this.sortModels(this.scopedModelItems);
+		this.activeModels = this.scope === "scoped" ? this.scopedModelItems : this.allModels;
+		this.filterModels(this.searchInput.getValue());
+	}
+
 	handleInput(keyData: string): void {
 		const kb = getEditorKeybindings();
+		// Ctrl+F to toggle favorite
+		if (keyData === "\x06") {
+			this.toggleFavorite();
+			return;
+		}
 		if (kb.matches(keyData, "tab")) {
 			if (this.scopedModelItems.length > 0) {
 				const nextScope: ModelScope = this.scope === "all" ? "scoped" : "all";
