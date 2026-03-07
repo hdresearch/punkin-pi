@@ -1492,6 +1492,7 @@ export const MODELS = {
 			api: "anthropic-messages",
 			provider: "anthropic",
 			baseUrl: "https://api.anthropic.com",
+			compat: {"anthropicBetas":["computer-use-2025-01-24","computer-use-2024-10-22","prompt-caching-2024-07-31","pdfs-2024-09-25"]},
 			reasoning: true,
 			input: ["text", "image"],
 			cost: {
@@ -1594,6 +1595,7 @@ export const MODELS = {
 			api: "anthropic-messages",
 			provider: "anthropic",
 			baseUrl: "https://api.anthropic.com",
+			compat: {"anthropicBetas":["computer-use-2025-01-24","files-api-2025-04-14","code-execution-2025-05-22","prompt-caching-2024-07-31","pdfs-2024-09-25"]},
 			reasoning: true,
 			input: ["text", "image"],
 			cost: {
@@ -1645,6 +1647,7 @@ export const MODELS = {
 			api: "anthropic-messages",
 			provider: "anthropic",
 			baseUrl: "https://api.anthropic.com",
+			compat: {"anthropicBetas":["interleaved-thinking-2025-05-14","computer-use-2025-01-24","code-execution-2025-05-22","prompt-caching-2024-07-31","pdfs-2024-09-25"]},
 			reasoning: true,
 			input: ["text", "image"],
 			cost: {
@@ -1662,6 +1665,7 @@ export const MODELS = {
 			api: "anthropic-messages",
 			provider: "anthropic",
 			baseUrl: "https://api.anthropic.com",
+			compat: {"anthropicBetas":["interleaved-thinking-2025-05-14","computer-use-2025-01-24","prompt-caching-2024-07-31","pdfs-2024-09-25"]},
 			reasoning: true,
 			input: ["text", "image"],
 			cost: {
@@ -1696,6 +1700,7 @@ export const MODELS = {
 			api: "anthropic-messages",
 			provider: "anthropic",
 			baseUrl: "https://api.anthropic.com",
+			compat: {"anthropicBetas":["interleaved-thinking-2025-05-14","computer-use-2025-11-24","files-api-2025-04-14","code-execution-2025-05-22","prompt-caching-2024-07-31","pdfs-2024-09-25"]},
 			reasoning: true,
 			input: ["text", "image"],
 			cost: {
@@ -1713,6 +1718,7 @@ export const MODELS = {
 			api: "anthropic-messages",
 			provider: "anthropic",
 			baseUrl: "https://api.anthropic.com",
+			compat: {"anthropicBetas":["context-1m-2025-08-07","output-128k-2025-02-19","fast-mode-2026-02-01","computer-use-2025-11-24","files-api-2025-04-14","code-execution-2025-05-22","mcp-client-2025-11-20","prompt-caching-2024-07-31","extended-cache-ttl-2025-04-11","pdfs-2024-09-25","token-efficient-tools-2025-02-19","skills-2025-10-02"]},
 			reasoning: true,
 			input: ["text", "image"],
 			cost: {
@@ -1747,6 +1753,7 @@ export const MODELS = {
 			api: "anthropic-messages",
 			provider: "anthropic",
 			baseUrl: "https://api.anthropic.com",
+			compat: {"anthropicBetas":["context-1m-2025-08-07","interleaved-thinking-2025-05-14","computer-use-2025-01-24","prompt-caching-2024-07-31","pdfs-2024-09-25"]},
 			reasoning: true,
 			input: ["text", "image"],
 			cost: {
@@ -1781,6 +1788,7 @@ export const MODELS = {
 			api: "anthropic-messages",
 			provider: "anthropic",
 			baseUrl: "https://api.anthropic.com",
+			compat: {"anthropicBetas":["context-1m-2025-08-07","interleaved-thinking-2025-05-14","computer-use-2025-01-24","files-api-2025-04-14","code-execution-2025-05-22","prompt-caching-2024-07-31","pdfs-2024-09-25"]},
 			reasoning: true,
 			input: ["text", "image"],
 			cost: {
@@ -1798,6 +1806,7 @@ export const MODELS = {
 			api: "anthropic-messages",
 			provider: "anthropic",
 			baseUrl: "https://api.anthropic.com",
+			compat: {"anthropicBetas":["context-1m-2025-08-07","interleaved-thinking-2025-05-14","computer-use-2025-11-24","files-api-2025-04-14","code-execution-2025-05-22","mcp-client-2025-11-20","prompt-caching-2024-07-31","extended-cache-ttl-2025-04-11","pdfs-2024-09-25","token-efficient-tools-2025-02-19","skills-2025-10-02"]},
 			reasoning: true,
 			input: ["text", "image"],
 			cost: {

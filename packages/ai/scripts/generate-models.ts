@@ -1,9 +1,10 @@
 #!/usr/bin/env tsx
 
-import { writeFileSync } from "fs";
+import { writeFileSync, readFileSync } from "fs";
 import { join, dirname } from "path";
 import { fileURLToPath } from "url";
 import { Api, KnownProvider, Model } from "../src/types.js";
+import { parse as parseToml } from "smol-toml";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -225,13 +226,32 @@ async function loadModelsDevData(): Promise<Model<any>[]> {
 			}
 		}
 
+		// Load Anthropic beta metadata
+		let anthropicBetaMap: Record<string, string[]> = {};
+		try {
+			const anthropicTomlPath = join(dirname(__dirname), "scripts", "provider-metadata", "anthropic-models.toml");
+			const anthropicTomlContent = readFileSync(anthropicTomlPath, "utf-8");
+			const anthropicMetadata = parseToml(anthropicTomlContent) as any;
+			
+			// Map model IDs to their supported betas
+			if (anthropicMetadata.models) {
+				for (const [modelId, modelData] of Object.entries(anthropicMetadata.models)) {
+					if (modelData && typeof modelData === "object" && "supported_betas" in modelData) {
+						anthropicBetaMap[modelId] = (modelData as any).supported_betas || [];
+					}
+				}
+			}
+		} catch (err) {
+			console.warn("Could not load Anthropic beta metadata:", err instanceof Error ? err.message : err);
+		}
+
 		// Process Anthropic models
 		if (data.anthropic?.models) {
 			for (const [modelId, model] of Object.entries(data.anthropic.models)) {
 				const m = model as ModelsDevModel;
 				if (m.tool_call !== true) continue;
 
-				models.push({
+				const modelRecord: any = {
 					id: modelId,
 					name: m.name || modelId,
 					api: "anthropic-messages",
@@ -247,7 +267,16 @@ async function loadModelsDevData(): Promise<Model<any>[]> {
 					},
 					contextWindow: m.limit?.context || 4096,
 					maxTokens: m.limit?.output || 4096,
-				});
+				};
+
+				// Add supportedBetas if available from metadata
+				if (anthropicBetaMap[modelId]?.length) {
+					modelRecord.compat = {
+						anthropicBetas: anthropicBetaMap[modelId],
+					};
+				}
+
+				models.push(modelRecord);
 			}
 		}
 

@@ -387,6 +387,12 @@ export interface OpenAIResponsesCompat {
 	// Reserved for future use
 }
 
+/** Compatibility settings for Anthropic Messages APIs. */
+export interface AnthropicCompat {
+	/** Beta headers required for this model to access extended features. */
+	anthropicBetas?: string[];
+}
+
 /**
  * OpenRouter provider routing preferences.
  * Controls which upstream providers OpenRouter routes requests to.
@@ -429,10 +435,12 @@ export interface Model<TApi extends Api> {
 	contextWindow: number;
 	maxTokens: number;
 	headers?: Record<string, string>;
-	/** Compatibility overrides for OpenAI-compatible APIs. If not set, auto-detected from baseUrl. */
+	/** Compatibility overrides for provider-specific APIs. If not set, auto-detected from baseUrl. */
 	compat?: TApi extends "openai-completions"
 		? OpenAICompletionsCompat
 		: TApi extends "openai-responses"
 			? OpenAIResponsesCompat
-			: never;
+			: TApi extends "anthropic-messages"
+				? AnthropicCompat
+				: never;
 }
