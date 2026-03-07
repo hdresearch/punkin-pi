@@ -13,6 +13,7 @@ import {
 	type TextContent,
 	type ThinkingBudgets,
 	type Transport,
+	type SimpleStreamOptions,
 } from "@punkin-pi/ai";
 import { agentLoop, agentLoopContinue } from "./agent-loop.js";
 import type {
@@ -31,6 +32,17 @@ import type {
  */
 function defaultConvertToLlm(messages: AgentMessage[]): Message[] {
 	return messages.filter((m) => m.role === "user" || m.role === "assistant" || m.role === "toolResult");
+}
+
+export type AgentSamplingOptions = Pick<
+	SimpleStreamOptions,
+	"temperature" | "maxTokens" | "topP" | "topK" | "minP" | "frequencyPenalty" | "presencePenalty" | "seed"
+>;
+
+export interface AgentAnthropicOptions {
+	interleavedThinking?: boolean;
+	context1M?: boolean;
+	anthropicBetaHeaders?: string[];
 }
 
 export interface AgentOptions {
@@ -94,6 +106,16 @@ export interface AgentOptions {
 	maxRetryDelayMs?: number;
 
 	/**
+	 * Default sampling options merged into every model call unless overridden.
+	 */
+	samplingOptions?: AgentSamplingOptions;
+
+	/**
+	 * Anthropic-specific streaming options.
+	 */
+	anthropicOptions?: AgentAnthropicOptions;
+
+	/**
 	 * Returns prefill text for turn bracketing.
 	 * Called before each LLM request to inject a partial assistant message.
 	 */
@@ -129,6 +151,8 @@ export class Agent {
 	private _thinkingBudgets?: ThinkingBudgets;
 	private _transport: Transport;
 	private _maxRetryDelayMs?: number;
+	private _samplingOptions: AgentSamplingOptions = {};
+	private _anthropicOptions: AgentAnthropicOptions = {};
 	private _getPrefill?: () => { prefillText: string; bracketId: import("@punkin-pi/ai").BracketId } | undefined;
 	private _providerOptions: Record<string, unknown> = {};
 
@@ -144,6 +168,8 @@ export class Agent {
 		this._thinkingBudgets = opts.thinkingBudgets;
 		this._transport = opts.transport ?? "sse";
 		this._maxRetryDelayMs = opts.maxRetryDelayMs;
+		this._samplingOptions = { ...(opts.samplingOptions ?? {}) };
+		this._anthropicOptions = { ...(opts.anthropicOptions ?? {}) };
 		this._getPrefill = opts.getPrefill;
 	}
 
@@ -203,6 +229,30 @@ export class Agent {
 	 */
 	set maxRetryDelayMs(value: number | undefined) {
 		this._maxRetryDelayMs = value;
+	}
+
+	get samplingOptions(): AgentSamplingOptions {
+		return { ...this._samplingOptions };
+	}
+
+	setSamplingOptions(options: AgentSamplingOptions | undefined): void {
+		this._samplingOptions = { ...(options ?? {}) };
+	}
+
+	get anthropicOptions(): AgentAnthropicOptions {
+		return {
+			...this._anthropicOptions,
+			anthropicBetaHeaders: this._anthropicOptions.anthropicBetaHeaders
+				? [...this._anthropicOptions.anthropicBetaHeaders]
+				: undefined,
+		};
+	}
+
+	setAnthropicOptions(options: AgentAnthropicOptions | undefined): void {
+		this._anthropicOptions = {
+			...(options ?? {}),
+			anthropicBetaHeaders: options?.anthropicBetaHeaders ? [...options.anthropicBetaHeaders] : undefined,
+		};
 	}
 
 	setPrefill(
@@ -456,6 +506,10 @@ export class Agent {
 			transport: this._transport,
 			thinkingBudgets: this._thinkingBudgets,
 			maxRetryDelayMs: this._maxRetryDelayMs,
+			...this._samplingOptions,
+			interleavedThinking: this._anthropicOptions.interleavedThinking,
+			context1M: this._anthropicOptions.context1M,
+			anthropicBetaHeaders: this._anthropicOptions.anthropicBetaHeaders,
 			convertToLlm: this.convertToLlm,
 			transformContext: this.transformContext,
 			getPrefill: this._getPrefill,

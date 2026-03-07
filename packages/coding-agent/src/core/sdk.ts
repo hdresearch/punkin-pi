@@ -285,6 +285,9 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 
 	const extensionRunnerRef: { current?: ExtensionRunner } = {};
 
+	const samplingSettings = settingsManager.getSamplingSettings();
+	const anthropicFeatures = settingsManager.getAnthropicFeatureSettings();
+
 	agent = new Agent({
 		initialState: {
 			systemPrompt: "",
@@ -304,6 +307,20 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 		transport: settingsManager.getTransport(),
 		thinkingBudgets: settingsManager.getThinkingBudgets(),
 		maxRetryDelayMs: settingsManager.getRetrySettings().maxDelayMs,
+		samplingOptions: samplingSettings,
+		anthropicOptions: {
+			interleavedThinking: anthropicFeatures.interleavedThinking,
+			context1M: anthropicFeatures.context1M,
+			anthropicBetaHeaders: [
+				...(anthropicFeatures.enableComputerUse ? ["computer-use-2025-04-01"] : []),
+				...(anthropicFeatures.enableCodeExecution ? ["code-execution-2024-11-14"] : []),
+				...(anthropicFeatures.enableFilesApi ? ["files-api-2024-11-14"] : []),
+				...(anthropicFeatures.enableFastMode ? ["fast-mode-2024-12-05"] : []),
+				...(anthropicFeatures.enableSkills ? ["skills-2025-02-12"] : []),
+				...(anthropicFeatures.enableMcpClient ? ["mcp-client-2024-12-05"] : []),
+				...(anthropicFeatures.enableTokenEfficientTools ? ["token-efficient-tools-2025-05-14"] : []),
+			],
+		},
 		getApiKey: async (provider) => {
 			// Use the provider argument from the in-flight request;
 			// agent.state.model may already be switched mid-turn.

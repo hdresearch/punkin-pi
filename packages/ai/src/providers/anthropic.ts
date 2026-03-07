@@ -307,6 +307,7 @@ export const streamAnthropic: StreamFunction<"anthropic-messages", AnthropicOpti
 				apiKey,
 				options?.interleavedThinking ?? true,
 				options?.context1M ?? false,
+				options?.anthropicBetaHeaders,
 				options?.headers,
 				copilotDynamicHeaders,
 			);
@@ -619,6 +620,7 @@ function createClient(
 	apiKey: string,
 	interleavedThinking: boolean,
 	context1M: boolean,
+	additionalBetaHeaders?: string[],
 	optionsHeaders?: Record<string, string>,
 	dynamicHeaders?: Record<string, string>,
 ): { client: Anthropic; isOAuthToken: boolean } {
@@ -628,6 +630,10 @@ function createClient(
 		if (interleavedThinking) {
 			betaFeatures.push("interleaved-thinking-2025-05-14");
 		}
+		if (additionalBetaHeaders?.length) {
+			betaFeatures.push(...additionalBetaHeaders);
+		}
+		const resolvedBetas = [...new Set(betaFeatures)];
 
 		const client = new Anthropic({
 			apiKey: null,
@@ -638,7 +644,7 @@ function createClient(
 				{
 					accept: "application/json",
 					"anthropic-dangerous-direct-browser-access": "true",
-					...(betaFeatures.length > 0 ? { "anthropic-beta": betaFeatures.join(",") } : {}),
+					...(resolvedBetas.length > 0 ? { "anthropic-beta": resolvedBetas.join(",") } : {}),
 				},
 				model.headers,
 				dynamicHeaders,
@@ -657,6 +663,10 @@ function createClient(
 	if (context1M && supportsContext1M(model.id)) {
 		betaFeatures.push("context-1m-2025-08-07");
 	}
+	if (additionalBetaHeaders?.length) {
+		betaFeatures.push(...additionalBetaHeaders);
+	}
+	const resolvedBetas = [...new Set(betaFeatures)];
 
 	// OAuth: Bearer auth, Claude Code identity headers
 	if (isOAuthToken(apiKey)) {
@@ -669,7 +679,7 @@ function createClient(
 				{
 					accept: "application/json",
 					"anthropic-dangerous-direct-browser-access": "true",
-					"anthropic-beta": `claude-code-20250219,oauth-2025-04-20,${betaFeatures.join(",")}`,
+					"anthropic-beta": `claude-code-20250219,oauth-2025-04-20,${resolvedBetas.join(",")}`,
 					"user-agent": `claude-cli/${claudeCodeVersion} (external, cli)`,
 					"x-app": "cli",
 				},
@@ -690,7 +700,7 @@ function createClient(
 			{
 				accept: "application/json",
 				"anthropic-dangerous-direct-browser-access": "true",
-				"anthropic-beta": betaFeatures.join(","),
+				"anthropic-beta": resolvedBetas.join(","),
 			},
 			model.headers,
 			optionsHeaders,

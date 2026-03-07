@@ -117,6 +117,21 @@ export interface StreamOptions {
 	 */
 	seed?: number;
 	/**
+	 * Anthropic-specific: enable interleaved thinking blocks.
+	 * Ignored by non-Anthropic providers.
+	 */
+	interleavedThinking?: boolean;
+	/**
+	 * Anthropic-specific: enable 1M context window beta where supported.
+	 * Ignored by non-Anthropic providers.
+	 */
+	context1M?: boolean;
+	/**
+	 * Anthropic-specific additional beta headers to request.
+	 * Ignored by non-Anthropic providers.
+	 */
+	anthropicBetaHeaders?: string[];
+	/**
 	 * Preferred transport for providers that support multiple transports.
 	 * Providers that do not support this option ignore it.
 	 */

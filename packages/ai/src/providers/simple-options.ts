@@ -6,12 +6,21 @@ export function buildBaseOptions(model: Model<Api>, options?: SimpleStreamOption
 		maxTokens: options?.maxTokens || Math.min(model.maxTokens, 32000),
 		signal: options?.signal,
 		apiKey: apiKey || options?.apiKey,
+		topP: options?.topP,
+		topK: options?.topK,
+		minP: options?.minP,
+		frequencyPenalty: options?.frequencyPenalty,
+		presencePenalty: options?.presencePenalty,
+		seed: options?.seed,
 		cacheRetention: options?.cacheRetention,
 		sessionId: options?.sessionId,
 		headers: options?.headers,
 		onPayload: options?.onPayload,
 		maxRetryDelayMs: options?.maxRetryDelayMs,
 		metadata: options?.metadata,
+		interleavedThinking: options?.interleavedThinking,
+		context1M: options?.context1M,
+		anthropicBetaHeaders: options?.anthropicBetaHeaders,
 	};
 }
 

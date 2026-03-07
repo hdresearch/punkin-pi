@@ -1,0 +1,189 @@
+# Sampling Parameter Metadata
+# Vendor defaults and valid ranges for model sampling controls.
+# Used for UI bounds checking and default value selection.
+
+[anthropic]
+# Temperature: randomness (0 = deterministic, 1 = maximum randomness)
+temperature.default = 1.0
+temperature.min = 0.0
+temperature.max = 1.0
+# Top-P (nucleus sampling): cumulative probability threshold
+topP.default = 1.0
+topP.min = 0.0
+topP.max = 1.0
+# Top-K: limit sampling to top K tokens (Anthropic uses top-P instead, topK ignored)
+topK.supported = false
+# Min-P: minimum probability threshold (not supported by Anthropic)
+minP.supported = false
+# Frequency penalty: reduce repetition by penalizing frequent tokens (not supported)
+frequencyPenalty.supported = false
+# Presence penalty: reduce repetition by penalizing tokens that appeared (not supported)
+presencePenalty.supported = false
+# Seed: deterministic sampling (not supported by Anthropic as of 2026-03)
+seed.supported = false
+
+[openai]
+temperature.default = 1.0
+temperature.min = 0.0
+temperature.max = 2.0
+topP.default = 1.0
+topP.min = 0.0
+topP.max = 1.0
+# OpenAI uses top-P, topK not supported
+topK.supported = false
+minP.supported = false
+frequencyPenalty.default = 0.0
+frequencyPenalty.min = -2.0
+frequencyPenalty.max = 2.0
+presencePenalty.default = 0.0
+presencePenalty.min = -2.0
+presencePenalty.max = 2.0
+seed.supported = true
+seed.note = "Integer, reproducible outputs when identical request"
+
+[openai-completions]
+# OpenAI Completions API (legacy and extended sampling)
+temperature.default = 1.0
+temperature.min = 0.0
+temperature.max = 2.0
+topP.default = 1.0
+topP.min = 0.0
+topP.max = 1.0
+topK.supported = true
+topK.default = -1
+topK.min = -1
+topK.max = 100
+topK.note = "-1 disables, positive integer limits to top K tokens"
+minP.default = 0.0
+minP.min = 0.0
+minP.max = 1.0
+frequencyPenalty.default = 0.0
+frequencyPenalty.min = 0.0
+frequencyPenalty.max = 2.0
+presencePenalty.default = 0.0
+presencePenalty.min = 0.0
+presencePenalty.max = 2.0
+seed.supported = true
+
+[google]
+# Google Gemini API
+temperature.default = 1.0
+temperature.min = 0.0
+temperature.max = 2.0
+topP.default = 0.95
+topP.min = 0.0
+topP.max = 1.0
+topK.default = 40
+topK.min = 1
+topK.max = 100
+topK.note = "Google uses both top-K and top-P together"
+minP.supported = false
+frequencyPenalty.supported = false
+presencePenalty.supported = false
+seed.supported = false
+
+[mistral]
+temperature.default = 0.7
+temperature.min = 0.0
+temperature.max = 1.0
+topP.default = 1.0
+topP.min = 0.0
+topP.max = 1.0
+topK.supported = false
+minP.supported = false
+frequencyPenalty.supported = false
+presencePenalty.supported = false
+seed.supported = true
+seed.note = "Integer for reproducible sampling"
+
+[openrouter]
+# OpenRouter passes through to underlying provider
+# Supports most parameters but behavior depends on selected model
+temperature.default = 1.0
+temperature.min = 0.0
+temperature.max = 2.0
+topP.default = 1.0
+topP.min = 0.0
+topP.max = 1.0
+topK.supported = true
+topK.default = 0
+topK.note = "0 disables, varies by backend model"
+minP.supported = true
+minP.default = 0.0
+minP.note = "Varies by backend model"
+frequencyPenalty.default = 0.0
+frequencyPenalty.min = -2.0
+frequencyPenalty.max = 2.0
+presencePenalty.default = 0.0
+presencePenalty.min = -2.0
+presencePenalty.max = 2.0
+seed.supported = true
+seed.note = "Depends on backend model"
+
+[groq]
+temperature.default = 1.0
+temperature.min = 0.0
+temperature.max = 2.0
+topP.default = 1.0
+topP.min = 0.0
+topP.max = 1.0
+topK.supported = false
+minP.supported = false
+frequencyPenalty.default = 0.0
+frequencyPenalty.min = 0.0
+frequencyPenalty.max = 2.0
+presencePenalty.default = 0.0
+presencePenalty.min = 0.0
+presencePenalty.max = 2.0
+seed.supported = true
+
+[deepseek]
+temperature.default = 1.0
+temperature.min = 0.0
+temperature.max = 2.0
+topP.default = 1.0
+topP.min = 0.0
+topP.max = 1.0
+topK.supported = false
+minP.supported = false
+frequencyPenalty.default = 0.0
+frequencyPenalty.min = -2.0
+frequencyPenalty.max = 2.0
+presencePenalty.default = 0.0
+presencePenalty.min = -2.0
+presencePenalty.max = 2.0
+seed.supported = false
+
+[aws-bedrock]
+# AWS Bedrock supports various models with different sampling params
+# These are conservative defaults
+temperature.default = 1.0
+temperature.min = 0.0
+temperature.max = 1.0
+topP.default = 1.0
+topP.min = 0.0
+topP.max = 1.0
+topK.default = 250
+topK.min = 0
+topK.max = 500
+topK.note = "Depends on backend model (Claude, Llama, etc.)"
+minP.supported = false
+frequencyPenalty.supported = false
+presencePenalty.supported = false
+seed.supported = false
+
+[vertex]
+# Google Vertex AI (same as Google generally)
+temperature.default = 1.0
+temperature.min = 0.0
+temperature.max = 2.0
+topP.default = 0.95
+topP.min = 0.0
+topP.max = 1.0
+topK.default = 40
+topK.min = 1
+topK.max = 100
+minP.supported = false
+frequencyPenalty.supported = false
+presencePenalty.supported = false
+seed.supported = false

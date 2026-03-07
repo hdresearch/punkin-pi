@@ -93,6 +93,29 @@ export interface ThinkingBudgetsSettings {
 	high?: number;
 }
 
+export interface SamplingSettings {
+	temperature?: number;
+	maxTokens?: number;
+	topP?: number;
+	topK?: number;
+	minP?: number;
+	frequencyPenalty?: number;
+	presencePenalty?: number;
+	seed?: number;
+}
+
+export interface AnthropicFeatureSettings {
+	interleavedThinking?: boolean; // default: true
+	context1M?: boolean; // default: false
+	enableComputerUse?: boolean; // default: false
+	enableCodeExecution?: boolean; // default: false
+	enableFilesApi?: boolean; // default: false
+	enableFastMode?: boolean; // default: false
+	enableSkills?: boolean; // default: false
+	enableMcpClient?: boolean; // default: false
+	enableTokenEfficientTools?: boolean; // default: false
+}
+
 export interface MarkdownSettings {
 	codeBlockIndent?: string; // default: "  "
 }
@@ -140,8 +163,12 @@ export interface Settings {
 	terminal?: TerminalSettings;
 	images?: ImageSettings;
 	enabledModels?: string[]; // Model patterns for cycling (same format as --models CLI flag)
+	favoriteModels?: string[]; // Favorited model IDs (provider/model)
+	recentModels?: string[]; // Most recently used model IDs (provider/model), newest first
 	doubleEscapeAction?: "fork" | "tree" | "none"; // Action for double-escape with empty editor (default: "tree")
 	thinkingBudgets?: ThinkingBudgetsSettings; // Custom token budgets for thinking levels
+	sampling?: SamplingSettings; // Default sampling parameters for model calls
+	anthropicFeatures?: AnthropicFeatureSettings; // Anthropic-specific feature toggles -> beta/header controls
 	editorPaddingX?: number; // Horizontal padding for input editor (default: 0)
 	autocompleteMaxVisible?: number; // Max visible items in autocomplete dropdown (default: 5)
 	showHardwareCursor?: boolean; // Show terminal cursor while still positioning it for IME
@@ -596,11 +623,19 @@ export class SettingsManager {
 		this.save();
 	}
 
+	private _pushRecentModel(fullModelId: string, maxItems = 20): void {
+		const current = this.globalSettings.recentModels ?? [];
+		const next = [fullModelId, ...current.filter((id) => id !== fullModelId)].slice(0, maxItems);
+		this.globalSettings.recentModels = next;
+		this.markModified("recentModels");
+	}
+
 	setDefaultModelAndProvider(provider: string, modelId: string): void {
 		this.globalSettings.defaultProvider = provider;
 		this.globalSettings.defaultModel = modelId;
 		this.markModified("defaultProvider");
 		this.markModified("defaultModel");
+		this._pushRecentModel(`${provider}/${modelId}`);
 		this.save();
 	}
 
@@ -860,6 +895,65 @@ export class SettingsManager {
 		return this.settings.thinkingBudgets;
 	}
 
+	getSamplingSettings(): SamplingSettings {
+		return { ...(this.settings.sampling ?? {}) };
+	}
+
+	setSamplingSettings(sampling: SamplingSettings): void {
+		this.globalSettings.sampling = { ...sampling };
+		this.markModified("sampling");
+		this.save();
+	}
+
+	getAnthropicFeatureSettings(): AnthropicFeatureSettings {
+		return {
+			interleavedThinking: this.settings.anthropicFeatures?.interleavedThinking ?? true,
+			context1M: this.settings.anthropicFeatures?.context1M ?? false,
+			enableComputerUse: this.settings.anthropicFeatures?.enableComputerUse ?? false,
+			enableCodeExecution: this.settings.anthropicFeatures?.enableCodeExecution ?? false,
+			enableFilesApi: this.settings.anthropicFeatures?.enableFilesApi ?? false,
+			enableFastMode: this.settings.anthropicFeatures?.enableFastMode ?? false,
+			enableSkills: this.settings.anthropicFeatures?.enableSkills ?? false,
+			enableMcpClient: this.settings.anthropicFeatures?.enableMcpClient ?? false,
+			enableTokenEfficientTools: this.settings.anthropicFeatures?.enableTokenEfficientTools ?? false,
+		};
+	}
+
+	setAnthropicFeatureSettings(features: AnthropicFeatureSettings): void {
+		this.globalSettings.anthropicFeatures = {
+			...(this.globalSettings.anthropicFeatures ?? {}),
+			...features,
+		};
+		this.markModified("anthropicFeatures");
+		this.save();
+	}
+
+	getFavoriteModels(): string[] {
+		return [...(this.settings.favoriteModels ?? [])];
+	}
+
+	toggleFavoriteModel(fullModelId: string): boolean {
+		const favorites = new Set(this.globalSettings.favoriteModels ?? this.settings.favoriteModels ?? []);
+		if (favorites.has(fullModelId)) {
+			favorites.delete(fullModelId);
+		} else {
+			favorites.add(fullModelId);
+		}
+		this.globalSettings.favoriteModels = [...favorites];
+		this.markModified("favoriteModels");
+		this.save();
+		return favorites.has(fullModelId);
+	}
+
+	getRecentModels(): string[] {
+		return [...(this.settings.recentModels ?? [])];
+	}
+
+	recordRecentModel(fullModelId: string, maxItems = 20): void {
+		this._pushRecentModel(fullModelId, maxItems);
+		this.save();
+	}
+
 	getShowImages(): boolean {
 		return this.settings.terminal?.showImages ?? true;
 	}
@@ -991,12 +1085,17 @@ export class SettingsManager {
 	}
 
 	getEnableContext1M(): boolean {
-		return this.settings.enableContext1M ?? false;
+		return this.settings.anthropicFeatures?.context1M ?? this.settings.enableContext1M ?? false;
 	}
 
 	setEnableContext1M(enabled: boolean): void {
 		this.globalSettings.enableContext1M = enabled;
+		if (!this.globalSettings.anthropicFeatures) {
+			this.globalSettings.anthropicFeatures = {};
+		}
+		this.globalSettings.anthropicFeatures.context1M = enabled;
 		this.markModified("enableContext1M");
+		this.markModified("anthropicFeatures", "context1M");
 		this.save();
 	}
 }
