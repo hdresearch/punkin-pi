@@ -11,12 +11,25 @@ export class TurnBoundaryComponent extends Container {
 	constructor(message: TurnStartMessage | TurnEndMessage) {
 		super();
 
-		const text =
-			message.role === "turnStart" ? renderTurnStart(message) : renderTurnEnd(message);
+		const isStart = message.role === "turnStart";
+		const text = isStart ? renderTurnStart(message) : renderTurnEnd(message);
+
+		// Bar on outer faces: START above (entry), END below (exit)
+		// Creates visual frame around turn content
+		const separator = "═".repeat(80);
+		
+		let content: string;
+		if (isStart) {
+			// START: bar above, text below
+			content = `${separator}\n│ ${text} │`;
+		} else {
+			// END: text above, bar below
+			content = `│ ${text} │\n${separator}`;
+		}
 
 		// Dim styling for boundaries — structural, not content
 		this.addChild(
-			new Text(theme.fg("dim", `─── ${text} ───`)),
+			new Text(theme.fg("dim", content)),
 		);
 	}
 }
