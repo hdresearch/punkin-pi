@@ -478,19 +478,33 @@ export class AgentSession {
 		const [turnStart, turnEnd] = this._carterKit.onAssistantTurnEnd(turnMessages);
 
 		// Inject turn boundaries into the message array for LLM context
-		// Find the assistant message in the array (should be near the end)
+		// Prefer reference match, but fall back to timestamp match since some paths copy messages
 		const messages = this.agent.state.messages;
-		const assistantIdx = messages.findIndex((m) => m === event.message);
-		if (assistantIdx === -1) {
-			// Assistant message not found — this is an empty/phantom turn
-			// Don't persist or emit boundaries (would cause TUI rendering bugs)
+		const assistantIdx = messages.findIndex(
+			(m) =>
+				m === event.message ||
+				(
+					m.role === "assistant" &&
+					event.message.role === "assistant" &&
+					"timestamp" in m &&
+					m.timestamp === event.message.timestamp &&
+					"endTimestamp" in m &&
+					m.endTimestamp === event.message.endTimestamp
+				),
+		);
+		const assistantHasContent = event.message.role === "assistant" && event.message.content.length > 0;
+		const hasTurnContent = assistantHasContent || event.toolResults.length > 0;
+		if (assistantIdx === -1 && !hasTurnContent) {
+			// Truly phantom turn: nothing to anchor, nothing useful to show
 			return;
 		}
 
-		// Insert turnStart before the assistant message
-		messages.splice(assistantIdx, 0, turnStart as unknown as AgentMessage);
-		// Append turnEnd at the end (after tool results which are already there)
-		messages.push(turnEnd as unknown as AgentMessage);
+		if (assistantIdx !== -1) {
+			// Insert turnStart before the assistant message
+			messages.splice(assistantIdx, 0, turnStart as unknown as AgentMessage);
+			// Append turnEnd at the end (after tool results which are already there)
+			messages.push(turnEnd as unknown as AgentMessage);
+		}
 
 		// Persist turn boundaries to session JSONL with turn number
 		const turnNumber = turnStart.turn;

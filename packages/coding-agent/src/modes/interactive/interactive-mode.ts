@@ -2139,10 +2139,14 @@ export class InteractiveMode {
 				if (this.streamingComponent && event.message.role === "assistant") {
 					this.streamingMessage = event.message;
 
-					// Abort debounce: if the message is aborted with zero content, skip
-					// display update — these are ghost events from rapid key input / context
-					// switches that produce no visible output and cause visual thrash.
+					// Abort debounce: if the message is aborted with zero content, remove the
+					// empty assistant component entirely — these are ghost events from rapid
+					// key input / context switches that otherwise leave visual stutter.
 					if (this.streamingMessage.stopReason === "aborted" && this.streamingMessage.content.length === 0) {
+						this.chatContainer.removeChild(this.streamingComponent);
+						if (this.lastAssistantComponent === this.streamingComponent) {
+							this.lastAssistantComponent = undefined;
+						}
 						this.streamingComponent = undefined;
 						this.streamingMessage = undefined;
 						this.pendingTools.clear();
