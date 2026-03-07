@@ -481,12 +481,16 @@ export class AgentSession {
 		// Find the assistant message in the array (should be near the end)
 		const messages = this.agent.state.messages;
 		const assistantIdx = messages.findIndex((m) => m === event.message);
-		if (assistantIdx !== -1) {
-			// Insert turnStart before the assistant message
-			messages.splice(assistantIdx, 0, turnStart as unknown as AgentMessage);
-			// Append turnEnd at the end (after tool results which are already there)
-			messages.push(turnEnd as unknown as AgentMessage);
+		if (assistantIdx === -1) {
+			// Assistant message not found — this is an empty/phantom turn
+			// Don't persist or emit boundaries (would cause TUI rendering bugs)
+			return;
 		}
+
+		// Insert turnStart before the assistant message
+		messages.splice(assistantIdx, 0, turnStart as unknown as AgentMessage);
+		// Append turnEnd at the end (after tool results which are already there)
+		messages.push(turnEnd as unknown as AgentMessage);
 
 		// Persist turn boundaries to session JSONL with turn number
 		const turnNumber = turnStart.turn;

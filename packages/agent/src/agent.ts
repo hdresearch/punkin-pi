@@ -493,7 +493,12 @@ export class Agent {
 					case "message_end":
 						partial = null;
 						this._state.streamMessage = null;
-						this.appendMessage(event.message);
+						if (!this._state.messages.includes(event.message)) {
+							this.appendMessage(event.message);
+						}
+						if (event.message.role === "assistant" && (event.message as any).errorMessage) {
+							this._state.error = (event.message as any).errorMessage;
+						}
 						break;
 
 					case "tool_execution_start": {
@@ -535,7 +540,9 @@ export class Agent {
 						(c.type === "toolCall" && c.name.trim().length > 0),
 				);
 				if (!onlyEmpty) {
-					this.appendMessage(partial);
+					if (!this._state.messages.includes(partial)) {
+						this.appendMessage(partial);
+					}
 				} else {
 					if (this.abortController?.signal.aborted) {
 						throw new Error("Request was aborted");

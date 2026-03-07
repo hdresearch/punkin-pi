@@ -143,11 +143,20 @@ async function runLoop(
 			newMessages.push(message);
 
 			if (message.stopReason === "error" || message.stopReason === "aborted") {
-				// Truly empty = content array is empty (aborted before producing anything)
-				const hasAnyContent = message.content.length > 0;
+				// Check for visible content (text/thinking that user would see)
+				// Tool calls still need turn_end for proper recording
+				const hasVisibleContent = message.content.some(
+					(c) => c.type === "text" || c.type === "thinking",
+				);
+				const hasToolCalls = message.content.some((c) => c.type === "toolCall");
 
-				// If truly empty abort, skip turn_end — prevents empty brackets in history
-				if (!hasAnyContent && message.stopReason === "aborted") {
+				// Skip turn_end for aborted turns with no visible content and no tool calls
+				// Error turns with visible content or tool calls still get turn_end (diagnostic value)
+				if (
+					message.stopReason === "aborted" &&
+					!hasVisibleContent &&
+					!hasToolCalls
+				) {
 					// No turn_end emitted — empty aborted turn silently dropped
 				} else {
 					stream.push({ type: "turn_end", message, toolResults: [] });
