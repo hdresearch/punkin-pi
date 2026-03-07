@@ -414,6 +414,23 @@ function buildParams(model: Model<"openai-completions">, context: Context, optio
 		params.temperature = options.temperature;
 	}
 
+	// Extended sampling parameters
+	if (options?.topP !== undefined && compat.supportsTopP !== false) {
+		(params as any).top_p = options.topP;
+	}
+	if (options?.topK !== undefined && compat.supportsTopK !== false) {
+		(params as any).top_k = options.topK;
+	}
+	if (options?.frequencyPenalty !== undefined && compat.supportsFrequencyPenalty !== false) {
+		params.frequency_penalty = options.frequencyPenalty;
+	}
+	if (options?.presencePenalty !== undefined && compat.supportsPresencePenalty !== false) {
+		params.presence_penalty = options.presencePenalty;
+	}
+	if (options?.seed !== undefined && compat.supportsSeed !== false) {
+		(params as any).seed = options.seed;
+	}
+
 	if (context.tools) {
 		params.tools = convertTools(context.tools, compat);
 	} else if (hasToolHistory(context.messages)) {
@@ -788,6 +805,15 @@ function detectCompat(model: Model<"openai-completions">): Required<OpenAIComple
 	const isGrok = provider === "xai" || baseUrl.includes("api.x.ai");
 
 	const isMistral = provider === "mistral" || baseUrl.includes("mistral.ai");
+	const isAnthropic = provider === "anthropic";
+	const isGroq = provider === "groq" || baseUrl.includes("api.groq.com");
+
+	// Provider-specific sampling parameter support (from API docs)
+	// OpenAI: top_p ✅ frequency_penalty ✅ presence_penalty ✅ seed ✅ (no top_k)
+	// Anthropic: top_p ✅ top_k ✅ (no frequency_penalty, presence_penalty, seed)
+	// Mistral: top_p ✅ top_k ✅ frequency_penalty ✅ presence_penalty ✅ seed ✅
+	// Groq: top_p ✅ top_k ✅ seed ✅ (limited frequency/presence penalty)
+	// Z.ai/DeepSeek: top_p ✅ only
 
 	return {
 		supportsStore: !isNonStandard,
@@ -800,6 +826,11 @@ function detectCompat(model: Model<"openai-completions">): Required<OpenAIComple
 		requiresThinkingAsText: isMistral,
 		requiresMistralToolIds: isMistral,
 		thinkingFormat: isZai ? "zai" : "openai",
+		supportsTopP: true, // All providers support top_p (nucleus sampling)
+		supportsTopK: !isZai, // Z.ai doesn't support top_k, others do
+		supportsFrequencyPenalty: !isAnthropic && !isGroq && !isZai, // OpenAI, Mistral, others
+		supportsPresencePenalty: !isAnthropic && !isGroq && !isZai,
+		supportsSeed: !isAnthropic && !isZai, // OpenAI, Mistral, Groq support seed
 		openRouterRouting: {},
 		vercelGatewayRouting: {},
 		supportsStrictMode: true,
@@ -826,6 +857,11 @@ function getCompat(model: Model<"openai-completions">): Required<OpenAICompletio
 		requiresThinkingAsText: model.compat.requiresThinkingAsText ?? detected.requiresThinkingAsText,
 		requiresMistralToolIds: model.compat.requiresMistralToolIds ?? detected.requiresMistralToolIds,
 		thinkingFormat: model.compat.thinkingFormat ?? detected.thinkingFormat,
+		supportsTopP: model.compat.supportsTopP ?? detected.supportsTopP,
+		supportsTopK: model.compat.supportsTopK ?? detected.supportsTopK,
+		supportsFrequencyPenalty: model.compat.supportsFrequencyPenalty ?? detected.supportsFrequencyPenalty,
+		supportsPresencePenalty: model.compat.supportsPresencePenalty ?? detected.supportsPresencePenalty,
+		supportsSeed: model.compat.supportsSeed ?? detected.supportsSeed,
 		openRouterRouting: model.compat.openRouterRouting ?? {},
 		vercelGatewayRouting: model.compat.vercelGatewayRouting ?? detected.vercelGatewayRouting,
 		supportsStrictMode: model.compat.supportsStrictMode ?? detected.supportsStrictMode,

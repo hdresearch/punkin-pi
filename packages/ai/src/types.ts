@@ -86,6 +86,37 @@ export interface StreamOptions {
 	signal?: AbortSignal;
 	apiKey?: string;
 	/**
+	 * Nucleus sampling threshold (0–1).
+	 * Cumulative probability mass of tokens to consider.
+	 * Supported by: OpenAI, Anthropic, Mistral, Qwen, Groq, others
+	 */
+	topP?: number;
+	/**
+	 * Top-K sampling: consider only the K most likely next tokens.
+	 * Supported by: OpenAI, Anthropic, Mistral, Qwen, Groq, others
+	 */
+	topK?: number;
+	/**
+	 * Minimum probability threshold. Only consider tokens with P >= minP.
+	 * Supported by: Anthropic (as top_k), Mistral, Qwen, others
+	 */
+	minP?: number;
+	/**
+	 * Frequency penalty: reduces likelihood of tokens that have appeared often.
+	 * Range typically 0–2. Supported by: OpenAI, Mistral, others
+	 */
+	frequencyPenalty?: number;
+	/**
+	 * Presence penalty: reduces likelihood of tokens that have appeared at all.
+	 * Range typically 0–2. Supported by: OpenAI, Mistral, others
+	 */
+	presencePenalty?: number;
+	/**
+	 * Deterministic seed for reproducible outputs.
+	 * Supported by: OpenAI, Mistral, Groq, others (not all providers)
+	 */
+	seed?: number;
+	/**
 	 * Preferred transport for providers that support multiple transports.
 	 * Providers that do not support this option ignore it.
 	 */
@@ -331,8 +362,18 @@ export interface OpenAICompletionsCompat {
 	requiresThinkingAsText?: boolean;
 	/** Whether tool call IDs must be normalized to Mistral format (exactly 9 alphanumeric chars). Default: auto-detected from URL. */
 	requiresMistralToolIds?: boolean;
-	/** Format for reasoning/thinking parameter. "openai" uses reasoning_effort, "zai" uses thinking: { type: "enabled" }, "qwen" uses enable_thinking: boolean. Default: "openai". */
-	thinkingFormat?: "openai" | "zai" | "qwen";
+	/** Format for reasoning/thinking parameter. "openai" uses reasoning_effort, "zai" uses thinking: { type: "enabled" }, "qwen" uses enable_thinking: boolean, "openrouter" uses { reasoning: { effort } }. Default: "openai". */
+	thinkingFormat?: "openai" | "zai" | "qwen" | "openrouter";
+	/** Whether the provider supports top_p (nucleus sampling). Default: true. */
+	supportsTopP?: boolean;
+	/** Whether the provider supports top_k (top-K sampling). Default: true. */
+	supportsTopK?: boolean;
+	/** Whether the provider supports frequency_penalty. Default: true. */
+	supportsFrequencyPenalty?: boolean;
+	/** Whether the provider supports presence_penalty. Default: true. */
+	supportsPresencePenalty?: boolean;
+	/** Whether the provider supports seed (deterministic output). Default: true. */
+	supportsSeed?: boolean;
 	/** OpenRouter-specific routing preferences. Only used when baseUrl points to OpenRouter. */
 	openRouterRouting?: OpenRouterRouting;
 	/** Vercel AI Gateway routing preferences. Only used when baseUrl points to Vercel AI Gateway. */
