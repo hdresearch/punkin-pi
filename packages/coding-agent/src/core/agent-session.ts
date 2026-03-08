@@ -18,7 +18,7 @@ import { readFileSync } from "node:fs";
 import { basename, dirname, join } from "node:path";
 import type { Agent, AgentEvent, AgentMessage, AgentState, AgentTool, ThinkingLevel } from "@punkin-pi/agent-core";
 import type { AssistantMessage, ImageContent, Message, Model, TextContent } from "@punkin-pi/ai";
-import { isContextOverflow, modelsAreEqual, resetApiProviders, supportsXhigh } from "@punkin-pi/ai";
+import { isContextOverflow, modelsAreEqual, resetApiProviders, supportsContext1M, supportsXhigh } from "@punkin-pi/ai";
 import { getDocsPath } from "../config.js";
 import { theme } from "../modes/interactive/theme/theme.js";
 import { stripFrontmatter } from "../utils/frontmatter.js";
@@ -785,7 +785,7 @@ export class AgentSession {
 
 		// CarterKit: append CarterKit system prompt instructions
 		const carterKitAddition = this._carterKit
-			? this._carterKit.systemPromptAddition(0, 200000) // initial, no pressure yet
+			? this._carterKit.systemPromptAddition(0, this.effectiveContextWindow() || 200000) // initial, no pressure yet
 			: undefined;
 		const allAppends = [...loaderAppendSystemPrompt];
 		if (carterKitAddition) allAppends.push(carterKitAddition);
@@ -1496,6 +1496,20 @@ export class AgentSession {
 		return !!this.model?.reasoning;
 	}
 
+	/**
+	 * Get the effective context window for the current model, accounting for
+	 * the 1M context beta flag when enabled for supported Anthropic models.
+	 */
+	effectiveContextWindow(): number {
+		const model = this.model;
+		if (!model) return 0;
+		const base = model.contextWindow ?? 0;
+		if (this.settingsManager.getEnableContext1M() && supportsContext1M(model.id)) {
+			return 1_000_000;
+		}
+		return base;
+	}
+
 	private _clampThinkingLevel(level: ThinkingLevel, availableLevels: ThinkingLevel[]): ThinkingLevel {
 		const ordered = THINKING_LEVELS_WITH_XHIGH;
 		const available = new Set(availableLevels);
@@ -1688,7 +1702,7 @@ export class AgentSession {
 		// Skip if message was aborted (user cancelled) - unless skipAbortedCheck is false
 		if (skipAbortedCheck && assistantMessage.stopReason === "aborted") return;
 
-		const contextWindow = this.model?.contextWindow ?? 0;
+		const contextWindow = this.effectiveContextWindow();
 
 		// Skip overflow check if the message came from a different model.
 		// This handles the case where user switched from a smaller-context model (e.g. opus)
@@ -2277,7 +2291,7 @@ export class AgentSession {
 		if (message.stopReason !== "error" || !message.errorMessage) return false;
 
 		// Context overflow is handled by compaction, not retry
-		const contextWindow = this.model?.contextWindow ?? 0;
+		const contextWindow = this.effectiveContextWindow();
 		if (isContextOverflow(message, contextWindow)) return false;
 
 		const err = message.errorMessage;
@@ -2940,7 +2954,7 @@ export class AgentSession {
 		const model = this.model;
 		if (!model) return undefined;
 
-		const contextWindow = model.contextWindow ?? 0;
+		const contextWindow = this.effectiveContextWindow();
 		if (contextWindow <= 0) return undefined;
 
 		// After compaction, the last assistant usage reflects pre-compaction context size.

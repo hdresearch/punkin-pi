@@ -377,7 +377,7 @@ export const streamAnthropic: StreamFunction<"anthropic-messages", AnthropicOpti
 							// Anthropic doesn't provide total_tokens, compute from components
 							output.usage.totalTokens =
 								output.usage.input + output.usage.output + output.usage.cacheRead + output.usage.cacheWrite;
-							calculateCost(model, output.usage);
+							calculateCost(model, output.usage, options?.context1M ?? false);
 						} else if (event.type === "content_block_start") {
 							sawContentEvent = true;
 							if (event.content_block.type === "text") {
@@ -510,7 +510,7 @@ export const streamAnthropic: StreamFunction<"anthropic-messages", AnthropicOpti
 							// Anthropic doesn't provide total_tokens, compute from components
 							output.usage.totalTokens =
 								output.usage.input + output.usage.output + output.usage.cacheRead + output.usage.cacheWrite;
-							calculateCost(model, output.usage);
+							calculateCost(model, output.usage, options?.context1M ?? false);
 						}
 					}
 
@@ -646,7 +646,7 @@ function isOAuthToken(apiKey: string): boolean {
  * Matches: claude-opus-4-6, claude-sonnet-4-6, claude-sonnet-4-5, claude-sonnet-4
  * (including dated variants and dot-notation aliases)
  */
-function supportsContext1M(modelId: string): boolean {
+export function supportsContext1M(modelId: string): boolean {
 	// Normalize: strip provider prefixes (anthropic., eu.anthropic., us.anthropic., etc.)
 	const id = modelId.replace(/^(?:eu\.|us\.)?anthropic\./, "");
 	return /^claude-(opus-4[.-]6|sonnet-4([.-]6|[.-]5|[.-]0|-20250514)?)\b/.test(id);

@@ -36,11 +36,31 @@ export function getModels<TProvider extends KnownProvider>(
 	return models ? (Array.from(models.values()) as Model<ModelApi<TProvider, keyof (typeof MODELS)[TProvider]>>[]) : [];
 }
 
-export function calculateCost<TApi extends Api>(model: Model<TApi>, usage: Usage): Usage["cost"] {
-	usage.cost.input = (model.cost.input / 1000000) * usage.input;
-	usage.cost.output = (model.cost.output / 1000000) * usage.output;
-	usage.cost.cacheRead = (model.cost.cacheRead / 1000000) * usage.cacheRead;
-	usage.cost.cacheWrite = (model.cost.cacheWrite / 1000000) * usage.cacheWrite;
+/**
+ * Calculate token costs for a model response.
+ *
+ * When `context1M` is true, applies Anthropic's 1M context pricing:
+ * input/cache-read/cache-write tokens above 200k are charged at 2× the base rate.
+ * The surcharge is distributed proportionally across token types.
+ */
+export function calculateCost<TApi extends Api>(model: Model<TApi>, usage: Usage, context1M = false): Usage["cost"] {
+	usage.cost.input = (model.cost.input / 1_000_000) * usage.input;
+	usage.cost.output = (model.cost.output / 1_000_000) * usage.output;
+	usage.cost.cacheRead = (model.cost.cacheRead / 1_000_000) * usage.cacheRead;
+	usage.cost.cacheWrite = (model.cost.cacheWrite / 1_000_000) * usage.cacheWrite;
+
+	// Anthropic 1M context: tokens above 200k are 2× base rate (i.e., +1× surcharge on excess)
+	if (context1M) {
+		const totalInputContext = usage.input + usage.cacheRead + usage.cacheWrite;
+		if (totalInputContext > 200_000) {
+			const excess = totalInputContext - 200_000;
+			const excessRatio = excess / totalInputContext;
+			usage.cost.input += (model.cost.input / 1_000_000) * usage.input * excessRatio;
+			usage.cost.cacheRead += (model.cost.cacheRead / 1_000_000) * usage.cacheRead * excessRatio;
+			usage.cost.cacheWrite += (model.cost.cacheWrite / 1_000_000) * usage.cacheWrite * excessRatio;
+		}
+	}
+
 	usage.cost.total = usage.cost.input + usage.cost.output + usage.cost.cacheRead + usage.cost.cacheWrite;
 	return usage.cost;
 }
