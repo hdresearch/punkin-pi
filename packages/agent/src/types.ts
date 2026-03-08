@@ -108,6 +108,13 @@ export interface AgentLoopConfig extends SimpleStreamOptions {
 	 * The prefill text must NOT end with whitespace (Anthropic constraint).
 	 */
 	getPrefill?: () => { prefillText: string; bracketId: import("@punkin-pi/ai").BracketId } | undefined;
+
+	/**
+	 * Empty response retry settings.
+	 * When model returns no content, retry up to these limits before treating as error.
+	 */
+	maxEmptyRetries?: number; // default: 3
+	maxEmptyRetryTimeMs?: number; // default: 15000 (15s total)
 }
 
 /**

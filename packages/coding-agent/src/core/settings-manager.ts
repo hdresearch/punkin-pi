@@ -74,6 +74,9 @@ export interface RetrySettings {
 	maxRetries?: number; // default: 3
 	baseDelayMs?: number; // default: 2000 (exponential backoff: 2s, 4s, 8s)
 	maxDelayMs?: number; // default: 60000 (max server-requested delay before failing)
+	// Empty response handling (model returns no content)
+	maxEmptyRetries?: number; // default: 3 - max retries for empty responses
+	maxEmptyRetryTimeMs?: number; // default: 15000 - max time spent retrying empty responses
 }
 
 export interface TerminalSettings {

@@ -216,9 +216,30 @@ async function runLoop(
 	stream.end(newMessages);
 }
 
+// Default empty response retry settings
+const DEFAULT_MAX_EMPTY_RETRIES = 3;
+const DEFAULT_MAX_EMPTY_RETRY_TIME_MS = 15000;
+const EMPTY_RETRY_JITTER_MS = 1000; // max random delay before retry
+
+/** Sleep with optional abort signal */
+function sleepWithSignal(ms: number, signal?: AbortSignal): Promise<void> {
+	return new Promise((resolve, reject) => {
+		if (signal?.aborted) {
+			reject(new Error("Aborted"));
+			return;
+		}
+		const timeout = setTimeout(resolve, ms);
+		signal?.addEventListener("abort", () => {
+			clearTimeout(timeout);
+			reject(new Error("Aborted"));
+		}, { once: true });
+	});
+}
+
 /**
  * Stream an assistant response from the LLM.
  * This is where AgentMessage[] gets transformed to Message[] for the LLM.
+ * Retries if model returns empty response (happens occasionally with Anthropic/OpenRouter).
  */
 async function streamAssistantResponse(
 	context: AgentContext,
@@ -226,7 +247,12 @@ async function streamAssistantResponse(
 	signal: AbortSignal | undefined,
 	stream: EventStream<AgentEvent, AgentMessage[]>,
 	streamFn?: StreamFn,
+	emptyRetryCount: number = 0,
+	emptyRetryStartMs?: number,
 ): Promise<AssistantMessage> {
+	const maxRetries = config.maxEmptyRetries ?? DEFAULT_MAX_EMPTY_RETRIES;
+	const maxTimeMs = config.maxEmptyRetryTimeMs ?? DEFAULT_MAX_EMPTY_RETRY_TIME_MS;
+	const retryStartMs = emptyRetryStartMs ?? Date.now();
 	// Apply context transform if configured (AgentMessage[] → AgentMessage[])
 	let messages = context.messages;
 	if (config.transformContext) {
@@ -309,6 +335,39 @@ async function streamAssistantResponse(
 					...(firstContentMs !== undefined ? { ttftMs: firstContentMs - submittedMs } : {}),
 					...{}
 				};
+
+				// Check for empty response (model returned no content) - this is NEVER valid
+				// This happens occasionally with Anthropic/OpenRouter after tool results
+				const isEmpty = finalMessage.content.length === 0 && finalMessage.stopReason !== "aborted" && finalMessage.stopReason !== "error";
+				if (isEmpty && !signal?.aborted) {
+					// Remove partial from context if added
+					if (addedPartial) {
+						context.messages.pop();
+					}
+					
+					const elapsedMs = Date.now() - retryStartMs;
+					const withinTimeLimit = elapsedMs < maxTimeMs;
+					const withinRetryLimit = emptyRetryCount < maxRetries;
+					
+					if (withinRetryLimit && withinTimeLimit) {
+						// Add random jitter before retry
+						const jitter = Math.random() * EMPTY_RETRY_JITTER_MS;
+						try {
+							await sleepWithSignal(jitter, signal);
+						} catch {
+							// Aborted during sleep
+						}
+						// Retry
+						return streamAssistantResponse(context, config, signal, stream, streamFn, emptyRetryCount + 1, retryStartMs);
+					} else {
+						// Exhausted retries - return as error
+						finalMessage = {
+							...finalMessage,
+							stopReason: "error",
+							errorMessage: `Model returned empty response after ${emptyRetryCount + 1} retries (${elapsedMs}ms)`,
+						};
+					}
+				}
 
 				if (addedPartial) {
 					context.messages[context.messages.length - 1] = finalMessage;
