@@ -3103,7 +3103,6 @@ export class InteractiveMode {
 					temperature: this.settingsManager.getSamplingSettings().temperature,
 					topP: this.settingsManager.getSamplingSettings().topP,
 					// Anthropic features
-					interleavedThinking: this.settingsManager.getAnthropicFeatureSettings().interleavedThinking ?? true,
 					enableContext1M: this.settingsManager.getEnableContext1M(),
 				},
 				{
@@ -3213,11 +3212,6 @@ export class InteractiveMode {
 						const current = this.settingsManager.getSamplingSettings();
 						this.settingsManager.setSamplingSettings({ ...current, topP: value });
 						this.session.agent.setSamplingOptions({ ...this.session.agent.samplingOptions, topP: value });
-					},
-					onInterleavedThinkingChange: (enabled) => {
-						const current = this.settingsManager.getAnthropicFeatureSettings();
-						this.settingsManager.setAnthropicFeatureSettings({ ...current, interleavedThinking: enabled });
-						this.session.agent.setAnthropicOptions({ ...this.session.agent.anthropicOptions, interleavedThinking: enabled });
 					},
 					onEnableContext1MChange: (enabled) => {
 						this.settingsManager.setEnableContext1M(enabled);

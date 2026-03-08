@@ -48,7 +48,6 @@ export interface SettingsConfig {
 	temperature?: number;
 	topP?: number;
 	// Anthropic features
-	interleavedThinking: boolean;
 	enableContext1M: boolean;
 }
 
@@ -77,7 +76,6 @@ export interface SettingsCallbacks {
 	onTemperatureChange: (value: number) => void;
 	onTopPChange: (value: number) => void;
 	// Anthropic features
-	onInterleavedThinkingChange: (enabled: boolean) => void;
 	onEnableContext1MChange: (enabled: boolean) => void;
 	onCancel: () => void;
 }
@@ -379,19 +377,9 @@ export class SettingsSelectorComponent extends Container {
 			values: ["0.5", "0.7", "0.8", "0.9", "0.95", "1.0"],
 		});
 
-		// Anthropic: Interleaved thinking (insert after top-p)
+		// Anthropic: Context 1M (insert after top-p)
 		const topPIndex = items.findIndex((item) => item.id === "top-p");
 		items.splice(topPIndex + 1, 0, {
-			id: "interleaved-thinking",
-			label: "Interleaved thinking",
-			description: "Enable Anthropic interleaved thinking blocks (Claude only)",
-			currentValue: config.interleavedThinking ? "true" : "false",
-			values: ["true", "false"],
-		});
-
-		// Anthropic: Context 1M (insert after interleaved-thinking)
-		const interleavedIndex = items.findIndex((item) => item.id === "interleaved-thinking");
-		items.splice(interleavedIndex + 1, 0, {
 			id: "context-1m",
 			label: "Context 1M",
 			description: "Enable 1M context window for supported Anthropic models",
@@ -464,9 +452,6 @@ export class SettingsSelectorComponent extends Container {
 						break;
 					case "top-p":
 						callbacks.onTopPChange(parseFloat(newValue));
-						break;
-					case "interleaved-thinking":
-						callbacks.onInterleavedThinkingChange(newValue === "true");
 						break;
 					case "context-1m":
 						callbacks.onEnableContext1MChange(newValue === "true");
