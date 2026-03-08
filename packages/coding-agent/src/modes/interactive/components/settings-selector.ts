@@ -44,6 +44,12 @@ export interface SettingsConfig {
 	quietStartup: boolean;
 	clearOnShrink: boolean;
 	enableTurnBrackets: boolean;
+	// Sampling parameters
+	temperature?: number;
+	topP?: number;
+	// Anthropic features
+	interleavedThinking: boolean;
+	enableContext1M: boolean;
 }
 
 export interface SettingsCallbacks {
@@ -67,6 +73,12 @@ export interface SettingsCallbacks {
 	onQuietStartupChange: (enabled: boolean) => void;
 	onClearOnShrinkChange: (enabled: boolean) => void;
 	onEnableTurnBracketsChange: (enabled: boolean) => void;
+	// Sampling
+	onTemperatureChange: (value: number) => void;
+	onTopPChange: (value: number) => void;
+	// Anthropic features
+	onInterleavedThinkingChange: (enabled: boolean) => void;
+	onEnableContext1MChange: (enabled: boolean) => void;
 	onCancel: () => void;
 }
 
@@ -347,6 +359,46 @@ export class SettingsSelectorComponent extends Container {
 			values: ["true", "false"],
 		});
 
+		// Sampling: Temperature (insert after turn-brackets)
+		const turnBracketsIndex = items.findIndex((item) => item.id === "turn-brackets");
+		items.splice(turnBracketsIndex + 1, 0, {
+			id: "temperature",
+			label: "Temperature",
+			description: "Sampling randomness (0 = deterministic, 1 = default, 2 = max creative)",
+			currentValue: String(config.temperature ?? 1.0),
+			values: ["0", "0.3", "0.5", "0.7", "1.0", "1.2", "1.5", "2.0"],
+		});
+
+		// Sampling: Top-P (insert after temperature)
+		const temperatureIndex = items.findIndex((item) => item.id === "temperature");
+		items.splice(temperatureIndex + 1, 0, {
+			id: "top-p",
+			label: "Top-P",
+			description: "Nucleus sampling threshold (1.0 = no filtering)",
+			currentValue: String(config.topP ?? 1.0),
+			values: ["0.5", "0.7", "0.8", "0.9", "0.95", "1.0"],
+		});
+
+		// Anthropic: Interleaved thinking (insert after top-p)
+		const topPIndex = items.findIndex((item) => item.id === "top-p");
+		items.splice(topPIndex + 1, 0, {
+			id: "interleaved-thinking",
+			label: "Interleaved thinking",
+			description: "Enable Anthropic interleaved thinking blocks (Claude only)",
+			currentValue: config.interleavedThinking ? "true" : "false",
+			values: ["true", "false"],
+		});
+
+		// Anthropic: Context 1M (insert after interleaved-thinking)
+		const interleavedIndex = items.findIndex((item) => item.id === "interleaved-thinking");
+		items.splice(interleavedIndex + 1, 0, {
+			id: "context-1m",
+			label: "Context 1M",
+			description: "Enable 1M context window for supported Anthropic models",
+			currentValue: config.enableContext1M ? "true" : "false",
+			values: ["true", "false"],
+		});
+
 		// Add borders
 		this.addChild(new DynamicBorder());
 
@@ -406,6 +458,18 @@ export class SettingsSelectorComponent extends Container {
 						break;
 					case "turn-brackets":
 						callbacks.onEnableTurnBracketsChange(newValue === "true");
+						break;
+					case "temperature":
+						callbacks.onTemperatureChange(parseFloat(newValue));
+						break;
+					case "top-p":
+						callbacks.onTopPChange(parseFloat(newValue));
+						break;
+					case "interleaved-thinking":
+						callbacks.onInterleavedThinkingChange(newValue === "true");
+						break;
+					case "context-1m":
+						callbacks.onEnableContext1MChange(newValue === "true");
 						break;
 				}
 			},

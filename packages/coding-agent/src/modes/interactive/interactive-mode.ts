@@ -3099,6 +3099,12 @@ export class InteractiveMode {
 					quietStartup: this.settingsManager.getQuietStartup(),
 					clearOnShrink: this.settingsManager.getClearOnShrink(),
 					enableTurnBrackets: this.settingsManager.getEnableTurnBrackets(),
+					// Sampling
+					temperature: this.settingsManager.getSamplingSettings().temperature,
+					topP: this.settingsManager.getSamplingSettings().topP,
+					// Anthropic features
+					interleavedThinking: this.settingsManager.getAnthropicFeatureSettings().interleavedThinking ?? true,
+					enableContext1M: this.settingsManager.getEnableContext1M(),
 				},
 				{
 					onAutoCompactChange: (enabled) => {
@@ -3197,6 +3203,25 @@ export class InteractiveMode {
 					},
 					onEnableTurnBracketsChange: (enabled) => {
 						this.settingsManager.setEnableTurnBrackets(enabled);
+					},
+					onTemperatureChange: (value) => {
+						const current = this.settingsManager.getSamplingSettings();
+						this.settingsManager.setSamplingSettings({ ...current, temperature: value });
+						this.session.agent.setSamplingOptions({ ...this.session.agent.samplingOptions, temperature: value });
+					},
+					onTopPChange: (value) => {
+						const current = this.settingsManager.getSamplingSettings();
+						this.settingsManager.setSamplingSettings({ ...current, topP: value });
+						this.session.agent.setSamplingOptions({ ...this.session.agent.samplingOptions, topP: value });
+					},
+					onInterleavedThinkingChange: (enabled) => {
+						const current = this.settingsManager.getAnthropicFeatureSettings();
+						this.settingsManager.setAnthropicFeatureSettings({ ...current, interleavedThinking: enabled });
+						this.session.agent.setAnthropicOptions({ ...this.session.agent.anthropicOptions, interleavedThinking: enabled });
+					},
+					onEnableContext1MChange: (enabled) => {
+						this.settingsManager.setEnableContext1M(enabled);
+						this.session.agent.setAnthropicOptions({ ...this.session.agent.anthropicOptions, context1M: enabled });
 					},
 					onCancel: () => {
 						done();

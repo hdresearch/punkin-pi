@@ -313,11 +313,19 @@ export class ModelSelectorComponent extends Container implements Focusable {
 		} else {
 			this.favoriteIds.delete(fullId);
 		}
-		// Re-sort and update display
+		// Re-sort and update display, preserving selection on same model
 		this.allModels = this.sortModels(this.allModels);
 		this.scopedModelItems = this.sortModels(this.scopedModelItems);
 		this.activeModels = this.scope === "scoped" ? this.scopedModelItems : this.allModels;
-		this.filterModels(this.searchInput.getValue());
+		// Re-filter and find the same model in new order
+		const query = this.searchInput.getValue();
+		this.filteredModels = query
+			? fuzzyFilter(this.activeModels, query, ({ id, provider }) => `${id} ${provider}`)
+			: this.activeModels;
+		// Find the toggled model in the new filtered list
+		const newIndex = this.filteredModels.findIndex((item) => this.getFullModelId(item) === fullId);
+		this.selectedIndex = newIndex !== -1 ? newIndex : Math.min(this.selectedIndex, Math.max(0, this.filteredModels.length - 1));
+		this.updateList();
 	}
 
 	handleInput(keyData: string): void {
