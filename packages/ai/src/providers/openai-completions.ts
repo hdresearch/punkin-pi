@@ -375,11 +375,16 @@ function createClient(
 		Object.assign(headers, optionsHeaders);
 	}
 
+	// Force fresh connection to avoid connection reuse bugs
+	headers["Connection"] = "close";
+
 	return new OpenAI({
 		apiKey,
 		baseURL: model.baseUrl,
 		dangerouslyAllowBrowser: true,
 		defaultHeaders: headers,
+		// Disable connection pooling - force fresh TCP connection per request
+		fetchOptions: { keepalive: false },
 	});
 }
 
