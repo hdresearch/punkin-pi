@@ -744,12 +744,21 @@ export class SettingsManager {
 		this.save();
 	}
 
-	getRetrySettings(): { enabled: boolean; maxRetries: number; baseDelayMs: number; maxDelayMs: number } {
+	getRetrySettings(): {
+		enabled: boolean;
+		maxRetries: number;
+		baseDelayMs: number;
+		maxDelayMs: number;
+		maxEmptyRetries: number;
+		maxEmptyRetryTimeMs: number;
+	} {
 		return {
 			enabled: this.getRetryEnabled(),
 			maxRetries: this.settings.retry?.maxRetries ?? 3,
 			baseDelayMs: this.settings.retry?.baseDelayMs ?? 2000,
 			maxDelayMs: this.settings.retry?.maxDelayMs ?? 60000,
+			maxEmptyRetries: this.settings.retry?.maxEmptyRetries ?? 3,
+			maxEmptyRetryTimeMs: this.settings.retry?.maxEmptyRetryTimeMs ?? 15000,
 		};
 	}
 
