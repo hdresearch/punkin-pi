@@ -412,6 +412,10 @@ export class SettingsManager {
 		return structuredClone(this.projectSettings);
 	}
 
+	getResolvedSettings(): Settings {
+		return structuredClone(this.settings);
+	}
+
 	reload(): void {
 		const globalLoad = SettingsManager.tryLoadFromStorage(this.storage, "global");
 		if (!globalLoad.error) {

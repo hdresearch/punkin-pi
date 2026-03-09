@@ -1,4 +1,7 @@
 import { randomInt } from "node:crypto";
+import { readFileSync } from "node:fs";
+import { homedir } from "node:os";
+import { join } from "node:path";
 import Anthropic from "@anthropic-ai/sdk";
 import type {
 	ContentBlockParam,
@@ -200,6 +203,54 @@ function mergeHeaders(...headerSources: (Record<string, string> | undefined)[]):
 
 const MAX_RETRIES = 3;
 const BASE_DELAY_MS = 1000;
+const EMPTY_RETRY_JITTER_MS = 1000; // max random delay before retry on empty response
+
+// Load modelMaxTokens from ~/.agent/settings.toml if it exists
+function loadModelMaxTokens(): Record<string, Record<string, number>> {
+	try {
+		const settingsPath = join(homedir(), ".agent", "settings.toml");
+		const content = readFileSync(settingsPath, "utf-8");
+		const result: Record<string, Record<string, number>> = {};
+		
+		let currentSection: string | null = null;
+		for (const line of content.split("\n")) {
+			const trimmed = line.trim();
+			if (!trimmed || trimmed.startsWith("#")) continue;
+			
+			// Check for [modelMaxTokens.provider] section
+			const sectionMatch = trimmed.match(/^\[modelMaxTokens\.(\w+)\]$/);
+			if (sectionMatch) {
+				currentSection = sectionMatch[1];
+				result[currentSection] = {};
+				continue;
+			}
+			
+			// Parse key = value in current section
+			if (currentSection) {
+				const kvMatch = trimmed.match(/^"([^"]+)"\s*=\s*(\d+)/);
+				if (kvMatch) {
+					const [, model, tokens] = kvMatch;
+					result[currentSection][model] = parseInt(tokens, 10);
+				}
+			}
+		}
+		
+		return result;
+	} catch {
+		return {}; // Return empty object if file doesn't exist
+	}
+}
+
+const modelMaxTokensConfig = loadModelMaxTokens();
+
+function getConfiguredMaxTokens(model: Model<"anthropic-messages">): number | undefined {
+	const anthropicConfig = modelMaxTokensConfig["anthropic"] || {};
+	// Try exact model ID match first, then with date suffix stripped
+	const modelId = model.id.replace(/(-\d{8})?$/, ""); // Strip date suffix if present
+	return anthropicConfig[model.id] ?? anthropicConfig[modelId];
+}
+
+
 
 function computeRetryDelayMs(attempt: number, maxRetryDelayMs: number): number {
 	const cap = maxRetryDelayMs > 0 ? maxRetryDelayMs : Number.MAX_SAFE_INTEGER;
@@ -766,10 +817,13 @@ function buildParams(
 	options?: AnthropicOptions,
 ): MessageCreateParamsStreaming {
 	const { cacheControl } = getCacheControl(model.baseUrl, options?.cacheRetention);
+	// max_tokens is required by Anthropic API. Use: explicit option > configured > provider max
+	const maxTokens = options?.maxTokens ?? getConfiguredMaxTokens(model) ?? (model.id.includes("opus-4-6") ? 128000 : 64000);
+	
 	const params: MessageCreateParamsStreaming = {
 		model: model.id,
 		messages: convertMessages(context.messages, model, isOAuthToken, cacheControl),
-		max_tokens: options?.maxTokens || (model.maxTokens / 3) | 0,
+		max_tokens: maxTokens,
 		stream: true,
 	};
 
@@ -816,11 +870,11 @@ function buildParams(
 			if (options.effort) {
 				params.output_config = { effort: options.effort };
 			}
-		} else {
-			// Budget-based thinking for older models
+		} else if (options.thinkingBudgetTokens) {
+			// Budget-based thinking for older models - only set if explicitly configured
 			params.thinking = {
 				type: "enabled",
-				budget_tokens: options.thinkingBudgetTokens || 1024,
+				budget_tokens: options.thinkingBudgetTokens,
 			};
 		}
 	}

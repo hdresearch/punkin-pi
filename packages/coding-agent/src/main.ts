@@ -7,7 +7,11 @@
 
 import { type ImageContent, modelsAreEqual, supportsXhigh } from "@punkin-pi/ai";
 import chalk from "chalk";
+import { existsSync, readFileSync } from "fs";
+import { homedir } from "os";
+import { join } from "path";
 import { createInterface } from "readline";
+import { stringify as stringifyToml } from "smol-toml";
 import { BUILD_COMMIT, BUILD_TIME } from "./build-info.js";
 import { type Args, parseArgs, printHelp } from "./cli/args.js";
 import { selectConfig } from "./cli/config-selector.js";
@@ -64,6 +68,16 @@ function reportSettingsErrors(settingsManager: SettingsManager, context: string)
 			console.error(chalk.dim(error.stack));
 		}
 	}
+}
+
+function getPersonalAgentOverrideDir(): string {
+	const env = process.env.PUNKIN_AGENT_OVERRIDE_DIR;
+	if (env) {
+		if (env === "~") return homedir();
+		if (env.startsWith("~/")) return homedir() + env.slice(1);
+		return env;
+	}
+	return join(homedir(), ".agent");
 }
 
 type PackageCommand = "install" | "remove" | "update" | "list";
@@ -542,6 +556,26 @@ export async function main(args: string[]) {
 
 	if (await handleConfigCommand(args)) {
 		return;
+	}
+
+	// Fast-path flags that don't require model/session boot
+	const quickParsed = parseArgs(args);
+	if (quickParsed.dumpSettingsTemplate) {
+		const templatePath = join(getPersonalAgentOverrideDir(), "settings_template.toml");
+		if (!existsSync(templatePath)) {
+			console.error(chalk.red(`Settings template not found: ${templatePath}`));
+			process.exit(1);
+		}
+		console.log(readFileSync(templatePath, "utf-8"));
+		process.exit(0);
+	}
+	if (quickParsed.promoteSettings) {
+		const cwd = process.cwd();
+		const agentDir = getAgentDir();
+		const settingsManager = SettingsManager.create(cwd, agentDir);
+		reportSettingsErrors(settingsManager, "promote-settings");
+		console.log(stringifyToml(settingsManager.getResolvedSettings() as Record<string, unknown>));
+		process.exit(0);
 	}
 
 	// Run migrations (pass cwd for project-local migrations)

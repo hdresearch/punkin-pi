@@ -106,6 +106,18 @@ export interface AgentOptions {
 	maxRetryDelayMs?: number;
 
 	/**
+	 * Maximum number of retries for empty responses (Anthropic-specific).
+	 * Default: 3. Set higher to be more aggressive about retrying empty responses.
+	 */
+	maxEmptyRetries?: number;
+
+	/**
+	 * Maximum total time in milliseconds to spend retrying empty responses.
+	 * Default: 15000 (15 seconds). Once exceeded, returns the empty response as an error.
+	 */
+	maxEmptyRetryTimeMs?: number;
+
+	/**
 	 * Default sampling options merged into every model call unless overridden.
 	 */
 	samplingOptions?: AgentSamplingOptions;
@@ -151,6 +163,8 @@ export class Agent {
 	private _thinkingBudgets?: ThinkingBudgets;
 	private _transport: Transport;
 	private _maxRetryDelayMs?: number;
+	private _maxEmptyRetries?: number;
+	private _maxEmptyRetryTimeMs?: number;
 	private _samplingOptions: AgentSamplingOptions = {};
 	private _anthropicOptions: AgentAnthropicOptions = {};
 	private _getPrefill?: () => { prefillText: string; bracketId: import("@punkin-pi/ai").BracketId } | undefined;
@@ -168,6 +182,8 @@ export class Agent {
 		this._thinkingBudgets = opts.thinkingBudgets;
 		this._transport = opts.transport ?? "sse";
 		this._maxRetryDelayMs = opts.maxRetryDelayMs;
+		this._maxEmptyRetries = opts.maxEmptyRetries;
+		this._maxEmptyRetryTimeMs = opts.maxEmptyRetryTimeMs;
 		this._samplingOptions = { ...(opts.samplingOptions ?? {}) };
 		this._anthropicOptions = { ...(opts.anthropicOptions ?? {}) };
 		this._getPrefill = opts.getPrefill;
@@ -506,6 +522,8 @@ export class Agent {
 			transport: this._transport,
 			thinkingBudgets: this._thinkingBudgets,
 			maxRetryDelayMs: this._maxRetryDelayMs,
+			maxEmptyRetries: this._maxEmptyRetries,
+			maxEmptyRetryTimeMs: this._maxEmptyRetryTimeMs,
 			...this._samplingOptions,
 			interleavedThinking: this._anthropicOptions.interleavedThinking,
 			context1M: this._anthropicOptions.context1M,
