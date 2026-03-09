@@ -218,8 +218,9 @@ async function runLoop(
 
 // Default empty response retry settings
 const DEFAULT_MAX_EMPTY_RETRIES = 3;
-const DEFAULT_MAX_EMPTY_RETRY_TIME_MS = 15000;
+const DEFAULT_MAX_EMPTY_RETRY_TIME_MS = 30000;
 const EMPTY_RETRY_JITTER_MS = 1000; // max random delay before retry
+const DEBUG_EMPTY_RETRY = process.env.PUNKIN_DEBUG_EMPTY_RETRY === "1";
 
 /** Sleep with optional abort signal */
 function sleepWithSignal(ms: number, signal?: AbortSignal): Promise<void> {
@@ -340,15 +341,31 @@ async function streamAssistantResponse(
 				// This happens occasionally with Anthropic/OpenRouter after tool results
 				const isEmpty = finalMessage.content.length === 0 && finalMessage.stopReason !== "aborted" && finalMessage.stopReason !== "error";
 				if (isEmpty && !signal?.aborted) {
-					// Remove partial from context if added
+					const includeEmptyInNextRequest = (config.includeEmptyMsgInNextRequest ?? true) && emptyRetryCount === 0;
+
 					if (addedPartial) {
-						context.messages.pop();
+						if (includeEmptyInNextRequest) {
+							context.messages[context.messages.length - 1] = finalMessage;
+						} else {
+							context.messages.pop();
+						}
+					} else if (includeEmptyInNextRequest) {
+						context.messages.push(finalMessage);
 					}
-					
+
 					const elapsedMs = Date.now() - retryStartMs;
 					const withinTimeLimit = elapsedMs < maxTimeMs;
 					const withinRetryLimit = emptyRetryCount < maxRetries;
-					
+
+					if (DEBUG_EMPTY_RETRY) {
+						console.error(
+							`[EMPTY-RETRY] model=${config.model.provider}/${config.model.id} ` +
+								`attempt=${emptyRetryCount + 1}/${maxRetries + 1} elapsedMs=${elapsedMs} ` +
+								`maxTimeMs=${maxTimeMs} includeEmptyInNextRequest=${includeEmptyInNextRequest} ` +
+								`addedPartial=${addedPartial}`,
+						);
+					}
+
 					if (withinRetryLimit && withinTimeLimit) {
 						// Add random jitter before retry
 						const jitter = Math.random() * EMPTY_RETRY_JITTER_MS;
@@ -360,11 +377,21 @@ async function streamAssistantResponse(
 						// Retry
 						return streamAssistantResponse(context, config, signal, stream, streamFn, emptyRetryCount + 1, retryStartMs);
 					} else {
+						if (DEBUG_EMPTY_RETRY) {
+							console.error(
+								`[EMPTY-RETRY-EXHAUSTED] model=${config.model.provider}/${config.model.id} ` +
+									`retries=${emptyRetryCount + 1} elapsedMs=${elapsedMs} maxTimeMs=${maxTimeMs}`,
+							);
+						}
 						// Exhausted retries - return as error
 						finalMessage = {
 							...finalMessage,
 							stopReason: "error",
-							errorMessage: `Model returned empty response after ${emptyRetryCount + 1} retries (${elapsedMs}ms)`,
+							errorMessage:
+								`Model returned empty response after ${emptyRetryCount + 1} retries (${elapsedMs}ms). ` +
+								`maxRetries=${maxRetries}, maxEmptyRetryTimeMs=${maxTimeMs}, includeEmptyMsgInNextRequest=${
+									config.includeEmptyMsgInNextRequest ?? true
+								}`,
 						};
 					}
 				}

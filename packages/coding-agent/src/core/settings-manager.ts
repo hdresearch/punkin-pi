@@ -77,6 +77,7 @@ export interface RetrySettings {
 	// Empty response handling (model returns no content)
 	maxEmptyRetries?: number; // default: 3 - max retries for empty responses
 	maxEmptyRetryTimeMs?: number; // default: 15000 - max time spent retrying empty responses
+	includeEmptyMsgInNextRequest?: boolean; // default: true - include first empty assistant response in next retry request
 }
 
 export interface TerminalSettings {
@@ -744,12 +745,23 @@ export class SettingsManager {
 		this.save();
 	}
 
-	getRetrySettings(): { enabled: boolean; maxRetries: number; baseDelayMs: number; maxDelayMs: number } {
+	getRetrySettings(): {
+		enabled: boolean;
+		maxRetries: number;
+		baseDelayMs: number;
+		maxDelayMs: number;
+		maxEmptyRetries: number;
+		maxEmptyRetryTimeMs: number;
+		includeEmptyMsgInNextRequest: boolean;
+	} {
 		return {
 			enabled: this.getRetryEnabled(),
 			maxRetries: this.settings.retry?.maxRetries ?? 3,
 			baseDelayMs: this.settings.retry?.baseDelayMs ?? 2000,
 			maxDelayMs: this.settings.retry?.maxDelayMs ?? 60000,
+			maxEmptyRetries: this.settings.retry?.maxEmptyRetries ?? 3,
+			maxEmptyRetryTimeMs: this.settings.retry?.maxEmptyRetryTimeMs ?? 15000,
+			includeEmptyMsgInNextRequest: this.settings.retry?.includeEmptyMsgInNextRequest ?? true,
 		};
 	}
 

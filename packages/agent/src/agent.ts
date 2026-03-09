@@ -118,6 +118,12 @@ export interface AgentOptions {
 	maxEmptyRetryTimeMs?: number;
 
 	/**
+	 * If true, include the first empty assistant message in the very next retry request context.
+	 * Default: true.
+	 */
+	includeEmptyMsgInNextRequest?: boolean;
+
+	/**
 	 * Default sampling options merged into every model call unless overridden.
 	 */
 	samplingOptions?: AgentSamplingOptions;
@@ -165,6 +171,7 @@ export class Agent {
 	private _maxRetryDelayMs?: number;
 	private _maxEmptyRetries?: number;
 	private _maxEmptyRetryTimeMs?: number;
+	private _includeEmptyMsgInNextRequest?: boolean;
 	private _samplingOptions: AgentSamplingOptions = {};
 	private _anthropicOptions: AgentAnthropicOptions = {};
 	private _getPrefill?: () => { prefillText: string; bracketId: import("@punkin-pi/ai").BracketId } | undefined;
@@ -184,6 +191,7 @@ export class Agent {
 		this._maxRetryDelayMs = opts.maxRetryDelayMs;
 		this._maxEmptyRetries = opts.maxEmptyRetries;
 		this._maxEmptyRetryTimeMs = opts.maxEmptyRetryTimeMs;
+		this._includeEmptyMsgInNextRequest = opts.includeEmptyMsgInNextRequest;
 		this._samplingOptions = { ...(opts.samplingOptions ?? {}) };
 		this._anthropicOptions = { ...(opts.anthropicOptions ?? {}) };
 		this._getPrefill = opts.getPrefill;
@@ -524,6 +532,7 @@ export class Agent {
 			maxRetryDelayMs: this._maxRetryDelayMs,
 			maxEmptyRetries: this._maxEmptyRetries,
 			maxEmptyRetryTimeMs: this._maxEmptyRetryTimeMs,
+			includeEmptyMsgInNextRequest: this._includeEmptyMsgInNextRequest,
 			...this._samplingOptions,
 			interleavedThinking: this._anthropicOptions.interleavedThinking,
 			context1M: this._anthropicOptions.context1M,

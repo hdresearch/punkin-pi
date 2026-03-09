@@ -287,6 +287,7 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 
 	const samplingSettings = settingsManager.getSamplingSettings();
 	const anthropicFeatures = settingsManager.getAnthropicFeatureSettings();
+	const retrySettings = settingsManager.getRetrySettings();
 
 	agent = new Agent({
 		initialState: {
@@ -306,7 +307,10 @@ export async function createAgentSession(options: CreateAgentSessionOptions = {}
 		followUpMode: settingsManager.getFollowUpMode(),
 		transport: settingsManager.getTransport(),
 		thinkingBudgets: settingsManager.getThinkingBudgets(),
-		maxRetryDelayMs: settingsManager.getRetrySettings().maxDelayMs,
+		maxRetryDelayMs: retrySettings.maxDelayMs,
+		maxEmptyRetries: retrySettings.maxEmptyRetries,
+		maxEmptyRetryTimeMs: retrySettings.maxEmptyRetryTimeMs,
+		includeEmptyMsgInNextRequest: retrySettings.includeEmptyMsgInNextRequest,
 		samplingOptions: samplingSettings,
 		anthropicOptions: {
 			interleavedThinking: anthropicFeatures.interleavedThinking,

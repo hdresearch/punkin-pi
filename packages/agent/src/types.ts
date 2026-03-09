@@ -115,6 +115,13 @@ export interface AgentLoopConfig extends SimpleStreamOptions {
 	 */
 	maxEmptyRetries?: number; // default: 3
 	maxEmptyRetryTimeMs?: number; // default: 15000 (15s total)
+
+	/**
+	 * If true, include the first empty assistant message in the very next retry request context.
+	 * This can help providers complete continuation-style turns instead of returning another empty.
+	 * Default: true
+	 */
+	includeEmptyMsgInNextRequest?: boolean;
 }
 
 /**
