@@ -9742,7 +9742,7 @@ export const MODELS = {
 				cacheRead: 0,
 				cacheWrite: 0,
 			},
-			contextWindow: 262144,
+			contextWindow: 131072,
 			maxTokens: 4096,
 		} satisfies Model<"openai-completions">,
 		"qwen/qwen3-next-80b-a3b-instruct:free": {
@@ -10669,7 +10669,7 @@ export const MODELS = {
 			api: "anthropic-messages",
 			provider: "vercel-ai-gateway",
 			baseUrl: "https://ai-gateway.vercel.sh",
-			reasoning: true,
+			reasoning: false,
 			input: ["text"],
 			cost: {
 				input: 0.5,
