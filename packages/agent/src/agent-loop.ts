@@ -427,11 +427,19 @@ async function streamAssistantResponse(
 					const withinRetryLimit = emptyRetryCount < maxRetries;
 
 					if (DEBUG_EMPTY_RETRY) {
+						// Summarize last 3 messages in context for diagnostics
+						const tail3 = context.messages.slice(-3).map((m, i) => {
+							const contentLen = "content" in m && Array.isArray(m.content) ? m.content.length : "?";
+							const contentTypes = "content" in m && Array.isArray(m.content)
+								? (m.content as any[]).map((c: any) => c.type || "?").join(",")
+								: "?";
+							return `[${m.role}:${contentLen}:${contentTypes}]`;
+						}).join(" → ");
 						console.error(
 							`[EMPTY-RETRY] id=${retryEpisodeId} model=${config.model.provider}/${config.model.id} ` +
 								`attempt=${emptyRetryCount + 1}/${maxRetries + 1} elapsedMs=${elapsedMs} ` +
 								`maxTimeMs=${maxTimeMs} includeEmptyInNextRequest=${includeEmptyInNextRequest} ` +
-								`addedPartial=${addedPartial}`,
+								`addedPartial=${addedPartial} tail=${tail3}`,
 						);
 					}
 
