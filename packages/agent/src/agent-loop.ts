@@ -286,24 +286,6 @@ async function streamAssistantResponse(
 	const retryStartMs = emptyRetryStartMs ?? Date.now();
 	const retryEpisodeId = emptyRetryEpisodeId ?? `${retryStartMs}-${Math.random().toString(36).slice(2, 8)}`;
 
-	// Strip any ephemeral virtual retry markers from context before this attempt.
-	// These are transient — used only to nudge the API on the previous retry call,
-	// never persisted in transcript/session history.
-	while (context.messages.length > 0) {
-		const last = context.messages[context.messages.length - 1];
-		if (
-			last.role === "user" &&
-			"content" in last &&
-			Array.isArray(last.content) &&
-			last.content.length === 1 &&
-			(last.content[0] as any)?.text === EMPTY_RETRY_VIRTUAL_TEXT
-		) {
-			context.messages.pop();
-		} else {
-			break;
-		}
-	}
-
 	// Apply context transform if configured (AgentMessage[] → AgentMessage[])
 	let messages = context.messages;
 	if (config.transformContext) {
@@ -497,6 +479,23 @@ async function streamAssistantResponse(
 									config.includeEmptyMsgInNextRequest ?? true
 								}, forcedReconnectAttempted=${forcedReconnectAttempted}`,
 						};
+					}
+				}
+
+				// Strip any ephemeral virtual retry markers before persisting the final message.
+				// These were injected to nudge the API but must never appear in session history.
+				while (context.messages.length > 0) {
+					const last = context.messages[context.messages.length - 1];
+					if (
+						last.role === "user" &&
+						"content" in last &&
+						Array.isArray(last.content) &&
+						last.content.length === 1 &&
+						(last.content[0] as any)?.text === EMPTY_RETRY_VIRTUAL_TEXT
+					) {
+						context.messages.pop();
+					} else {
+						break;
 					}
 				}
 
