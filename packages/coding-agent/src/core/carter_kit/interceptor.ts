@@ -17,8 +17,11 @@
  * Pure classification, IO for store operations.
  */
 
+import { existsSync, readFileSync } from "node:fs";
+import { resolve } from "node:path";
+import { homedir } from "node:os";
 import type { Store } from "./store.js";
-import { cacheHandle, getBlobContent, lookupCachedHandle, putBlob, putHandle } from "./store.js";
+import { cacheHandle, getBlobContent, hash, lookupCachedHandle, putBlob, putHandle } from "./store.js";
 import type { ContentHash, Handle, HandleId, Idempotency, PressureLevel } from "./types.js";
 import {
 	classifyBash,
@@ -29,6 +32,48 @@ import {
 	Pending,
 	Resolved,
 } from "./types.js";
+
+// ============================================================================
+// File content validation for cache
+// ============================================================================
+
+/** Tools that read files and need content-hash validation */
+const FILE_TOOLS = new Set(["read", "grep", "find", "ls"]);
+
+/**
+ * Extract file path from tool args if applicable.
+ * Returns undefined if tool doesn't have a path arg or path doesn't exist.
+ */
+function extractFilePath(toolName: string, args: unknown): string | undefined {
+	if (!FILE_TOOLS.has(toolName)) return undefined;
+	if (typeof args !== "object" || args === null) return undefined;
+	
+	const path = (args as Record<string, unknown>).path;
+	if (typeof path !== "string") return undefined;
+	
+	// Resolve path (handle ~)
+	const resolved = path.startsWith("~") 
+		? resolve(homedir(), path.slice(2))
+		: resolve(path);
+	
+	return existsSync(resolved) ? resolved : undefined;
+}
+
+/**
+ * Check if cached content matches current file content.
+ * Returns true if content is the same (cache is valid).
+ */
+function validateCachedContent(filePath: string, cachedContent: string): boolean {
+	try {
+		const currentContent = readFileSync(filePath, "utf-8");
+		const currentHash = hash(currentContent);
+		const cachedHash = hash(cachedContent);
+		return currentHash === cachedHash;
+	} catch {
+		// File unreadable — invalidate cache
+		return false;
+	}
+}
 
 // ============================================================================
 // Intercept decision
@@ -63,7 +108,20 @@ export function decideIntercept(store: Store, toolName: string, args: unknown): 
 			if (handle?.resultHash) {
 				const content = getBlobContent(store, handle.resultHash);
 				if (content) {
-					return { tag: "UseCached", handleId: existingId, resultText: content };
+					// For file-based tools, validate that source file hasn't changed
+					const filePath = extractFilePath(toolName, args);
+					if (filePath) {
+						// File exists — check if content matches cached
+						if (!validateCachedContent(filePath, content)) {
+							// File changed — invalidate cache, fall through to execute
+							store.handleCache.delete(cacheKey);
+						} else {
+							return { tag: "UseCached", handleId: existingId, resultText: content };
+						}
+					} else {
+						// Not a file tool or file doesn't exist — use cached
+						return { tag: "UseCached", handleId: existingId, resultText: content };
+					}
 				}
 			}
 		}
