@@ -1351,6 +1351,16 @@ async function generateModels() {
 		}));
 	allModels.push(...azureOpenAiModels);
 
+	// Vers: Anthropic models routed through the Vers LLM proxy (tokens.vers.sh)
+	const versModels: Model<Api>[] = allModels
+		.filter((model) => model.provider === "anthropic" && model.api === "anthropic-messages")
+		.map((model) => ({
+			...model,
+			provider: "vers",
+			baseUrl: "https://tokens.vers.sh",
+		}));
+	allModels.push(...versModels);
+
 	// Group by provider and deduplicate by model ID
 	const providers: Record<string, Record<string, Model<any>>> = {};
 	for (const model of allModels) {
