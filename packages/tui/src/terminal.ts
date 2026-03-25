@@ -1,5 +1,4 @@
 import * as fs from "node:fs";
-import koffi from "koffi";
 import { setKittyProtocolActive } from "./keys.js";
 import { StdinBuffer } from "./stdin-buffer.js";
 
@@ -174,6 +173,9 @@ export class ProcessTerminal implements Terminal {
 	private enableWindowsVTInput(): void {
 		if (process.platform !== "win32") return;
 		try {
+			// Dynamic import to avoid loading koffi on non-Windows / non-Node runtimes
+			// eslint-disable-next-line @typescript-eslint/no-require-imports
+			const koffi = require("koffi");
 			const k32 = koffi.load("kernel32.dll");
 			const GetStdHandle = k32.func("void* __stdcall GetStdHandle(int)");
 			const GetConsoleMode = k32.func("bool __stdcall GetConsoleMode(void*, _Out_ uint32_t*)");
