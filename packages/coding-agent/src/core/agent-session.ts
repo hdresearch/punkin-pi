@@ -1165,6 +1165,11 @@ export class AgentSession {
 	 * Send a user message to the agent. Always triggers a turn.
 	 * When the agent is streaming, use deliverAs to specify how to queue the message.
 	 *
+	 * In RPC mode (when PUNKIN_RPC_CALLBACK_URL is set), the message is instead
+	 * POSTed to the callback URL so the RPC caller can schedule a new task turn.
+	 * This is necessary because the pi process is ephemeral in RPC mode and
+	 * calling prompt() directly would have no effect after the process exits.
+	 *
 	 * @param content User message content (string or content array)
 	 * @param options.deliverAs Delivery mode when streaming: "steer" or "followUp"
 	 */
@@ -1190,6 +1195,33 @@ export class AgentSession {
 			}
 			text = textParts.join("\n");
 			if (images.length === 0) images = undefined;
+		}
+
+		// In RPC mode, if a callback URL is configured, POST the message to the
+		// RPC caller instead of calling prompt() directly. The pi process may be
+		// ephemeral (killed after agent_end) so the caller must handle scheduling
+		// the follow-up turn.
+		const rpcCallbackUrl = process.env.PUNKIN_RPC_CALLBACK_URL;
+		if (rpcCallbackUrl) {
+			const agentName = process.env.VERS_AGENT_NAME ?? process.env.PUNKIN_AGENT_NAME ?? undefined;
+			const body = JSON.stringify({
+				prompt: text,
+				source: "reminder",
+				...(agentName !== undefined && { agentName }),
+			});
+			console.log(
+				`[sendUserMessage] RPC callback mode — POSTing to ${rpcCallbackUrl}/tasks` +
+					(agentName ? ` (agent: ${agentName})` : ""),
+			);
+			// Fire-and-forget: don't block the caller, but do log errors
+			fetch(`${rpcCallbackUrl}/tasks`, {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body,
+			}).catch((err: unknown) => {
+				console.error("[sendUserMessage] RPC callback POST failed:", err);
+			});
+			return;
 		}
 
 		// Use prompt() with expandPromptTemplates: false to skip command handling and template expansion
