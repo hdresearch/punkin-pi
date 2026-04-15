@@ -815,6 +815,7 @@ export async function runRootCommand(parsed: Args, rawArgs: string[]): Promise<v
 			messages: parsedArgs.messages,
 			initialMessage,
 			initialImages,
+			printThoughts: parsedArgs.printThoughts,
 		});
 		await session.dispose();
 		stopThemeWatcher();

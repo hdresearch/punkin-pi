@@ -23,7 +23,11 @@ export function buildInitialMessage({
 	fileImages,
 	stdinContent,
 }: InitialMessageInput): InitialMessageResult {
-	const hasInitialContext = stdinContent !== undefined || fileText !== undefined || (fileImages?.length ?? 0) > 0;
+	const hasInitialContext =
+		stdinContent !== undefined ||
+		fileText !== undefined ||
+		(fileImages?.length ?? 0) > 0 ||
+		parsed.messages.length > 0;
 	if (!hasInitialContext) {
 		return {
 			initialImages: undefined,

@@ -28,13 +28,22 @@ describe("buildInitialMessage", () => {
 		expect(parsed.messages).toEqual(["second"]);
 	});
 
-	it("leaves plain CLI messages untouched when there is no initial file or stdin input", () => {
+	it("consumes first CLI message as initialMessage when no file or stdin input", () => {
 		const parsed = createArgs(["first", "second"]);
+
+		const result = buildInitialMessage({ parsed });
+
+		expect(result.initialMessage).toBe("first");
+		expect(result.initialImages).toBeUndefined();
+		expect(parsed.messages).toEqual(["second"]);
+	});
+
+	it("returns undefined when no messages, files, or stdin", () => {
+		const parsed = createArgs([]);
 
 		const result = buildInitialMessage({ parsed });
 
 		expect(result.initialMessage).toBeUndefined();
 		expect(result.initialImages).toBeUndefined();
-		expect(parsed.messages).toEqual(["first", "second"]);
 	});
 });

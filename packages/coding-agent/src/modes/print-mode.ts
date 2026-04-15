@@ -2,8 +2,9 @@
  * Print mode (single-shot): Send prompts, output result, exit.
  *
  * Used for:
- * - `omp -p "prompt"` - text output
- * - `omp --mode json "prompt"` - JSON event stream
+ * - `ohp -p "prompt"` - text output (thinking hidden by default)
+ * - `ohp -p --print-thoughts "prompt"` - text output with thinking/squiggle
+ * - `ohp --mode json "prompt"` - JSON event stream
  */
 import type { AssistantMessage, ImageContent } from "@oh-my-pi/pi-ai";
 import type { AgentSession } from "../session/agent-session";
@@ -20,6 +21,8 @@ export interface PrintModeOptions {
 	initialMessage?: string;
 	/** Images to attach to the initial message */
 	initialImages?: ImageContent[];
+	/** If true, include thinking/squiggle blocks in text output */
+	printThoughts?: boolean;
 }
 
 /**
@@ -27,7 +30,7 @@ export interface PrintModeOptions {
  * Sends prompts to the agent and outputs the result.
  */
 export async function runPrintMode(session: AgentSession, options: PrintModeOptions): Promise<void> {
-	const { mode, messages = [], initialMessage, initialImages } = options;
+	const { mode, messages = [], initialMessage, initialImages, printThoughts } = options;
 
 	// Emit session header for JSON mode
 	if (mode === "json") {
@@ -159,10 +162,10 @@ export async function runPrintMode(session: AgentSession, options: PrintModeOpti
 	// In text mode, output final response
 	if (mode === "text") {
 		const state = session.state;
-		const lastMessage = state.messages[state.messages.length - 1];
+		const lastAssistant = state.messages.findLast(m => m.role === "assistant");
 
-		if (lastMessage?.role === "assistant") {
-			const assistantMsg = lastMessage as AssistantMessage;
+		if (lastAssistant) {
+			const assistantMsg = lastAssistant as AssistantMessage;
 
 			// Check for error/aborted
 			if (assistantMsg.stopReason === "error" || assistantMsg.stopReason === "aborted") {
@@ -173,7 +176,19 @@ export async function runPrintMode(session: AgentSession, options: PrintModeOpti
 			// Output text content
 			for (const content of assistantMsg.content) {
 				if (content.type === "text") {
-					process.stdout.write(`${content.text}\n`);
+					// Strip boot ceremony from text output — it's system prompt noise
+					const text = content.text.replace(/<boot>[\s\S]*?<\/boot>\s*/g, "").trimStart();
+					if (text.length > 0) {
+						process.stdout.write(`${text}\n`);
+					}
+				} else if (
+					printThoughts &&
+					content.type === "thinking" &&
+					"thinking" in content &&
+					typeof content.thinking === "string" &&
+					content.thinking.length > 0
+				) {
+					process.stdout.write(`${content.thinking}\n`);
 				}
 			}
 		}
