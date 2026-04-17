@@ -11,7 +11,16 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { createInterface } from "node:readline/promises";
 import type { ImageContent } from "@oh-my-pi/pi-ai";
-import { $env, getConfigDirName, getProjectDir, logger, postmortem, setProjectDir, VERSION } from "@oh-my-pi/pi-utils";
+import {
+	$env,
+	getAgentDir,
+	getConfigDirName,
+	getProjectDir,
+	logger,
+	postmortem,
+	setProjectDir,
+	VERSION,
+} from "@oh-my-pi/pi-utils";
 import chalk from "chalk";
 import { invalidate as invalidateFsCache } from "./capability/fs";
 import type { Args } from "./cli/args";
@@ -199,24 +208,53 @@ async function promptForkSession(session: SessionInfo): Promise<boolean> {
 	}
 }
 
+const CHANGELOG_STATE_PATH = path.join(getAgentDir(), "changelog-state.json");
+
+async function readLastChangelogVersionState(): Promise<string | undefined> {
+	try {
+		const raw = await fs.readFile(CHANGELOG_STATE_PATH, "utf8");
+		const parsed = JSON.parse(raw) as { lastVersion?: unknown };
+		return typeof parsed.lastVersion === "string" ? parsed.lastVersion : undefined;
+	} catch (error) {
+		const code = (error as NodeJS.ErrnoException).code;
+		if (code !== "ENOENT") {
+			logger.warn("Failed reading changelog state", { error: String(error), path: CHANGELOG_STATE_PATH });
+		}
+		return undefined;
+	}
+}
+
+async function writeLastChangelogVersionState(version: string): Promise<void> {
+	try {
+		await fs.mkdir(path.dirname(CHANGELOG_STATE_PATH), { recursive: true });
+		await fs.writeFile(
+			CHANGELOG_STATE_PATH,
+			`${JSON.stringify({ lastVersion: version, updatedAt: new Date().toISOString() }, null, 2)}\n`,
+			"utf8",
+		);
+	} catch (error) {
+		logger.warn("Failed writing changelog state", { error: String(error), path: CHANGELOG_STATE_PATH });
+	}
+}
+
 async function getChangelogForDisplay(parsed: Args): Promise<string | undefined> {
 	if (parsed.continue || parsed.resume) {
 		return undefined;
 	}
 
-	const lastVersion = settings.get("lastChangelogVersion");
+	const lastVersion = await readLastChangelogVersionState();
 	const changelogPath = getChangelogPath();
 	const entries = await parseChangelog(changelogPath);
 
 	if (!lastVersion) {
 		if (entries.length > 0) {
-			settings.set("lastChangelogVersion", VERSION);
+			await writeLastChangelogVersionState(VERSION);
 			return entries.map(e => e.content).join("\n\n");
 		}
 	} else {
 		const newEntries = getNewEntries(entries, lastVersion);
 		if (newEntries.length > 0) {
-			settings.set("lastChangelogVersion", VERSION);
+			await writeLastChangelogVersionState(VERSION);
 			return newEntries.map(e => e.content).join("\n\n");
 		}
 	}
