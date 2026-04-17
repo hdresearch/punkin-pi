@@ -51,9 +51,9 @@ function loadHashRegistry(): HashRegistry {
 			"boot-sequence.md": "0ea8fcf4dcf8",
 			"ethos.md": "40324520911e",
 			"handle-tools.md": "ee345e32ddd8",
-			"pressure-critical.md": "10f72385b77e",
-			"pressure-high.md": "b3c3503d588d",
-			"pressure-medium.md": "e0cb18e0fb89",
+			"pressure-critical.md": "270921f45b87",
+			"pressure-high.md": "11fc4c620d88",
+			"pressure-medium.md": "c298504d8af1",
 		},
 	};
 }
