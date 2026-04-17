@@ -63,7 +63,7 @@ import {
 	resolveModelRoleValue,
 } from "../config/model-resolver";
 import { expandPromptTemplate, type PromptTemplate, renderPromptTemplate } from "../config/prompt-templates";
-import type { Settings, SkillsSettings } from "../config/settings";
+import { type Settings, type SkillsSettings, settings } from "../config/settings";
 import { BOOT_SEQUENCE_PROMPT, ETHOS_PROMPT, HANDLE_TOOLS_PROMPT, pressureWarning } from "../core/carter_kit/runtime";
 import { type CarterKitHook, createCarterKitHook } from "../core/carter_kit/session-hook";
 import { type BashResult, executeBash as executeBashCommand } from "../exec/bash-executor";
@@ -1812,6 +1812,11 @@ export class AgentSession {
 		}
 		this.#carterKitHook?.shutdown();
 		await this.sessionManager.close();
+		try {
+			await settings.flush();
+		} catch (error) {
+			logger.warn("Failed to flush settings during dispose", { error: String(error) });
+		}
 		this.#closeAllProviderSessions("dispose");
 		this.#unsubscribePendingActionPush?.();
 		this.#unsubscribePendingActionPush = undefined;
@@ -2654,8 +2659,10 @@ export class AgentSession {
 			},
 			hasPendingMessages: () => this.queuedMessageCount > 0,
 			shutdown: () => {
-				void this.dispose();
-				process.exit(0);
+				// Must await dispose so pending writes flush before process exit.
+				// Settings (lastChangelogVersion, etc) and session/transcript writes are
+				// debounced in background timers — exiting immediately drops them.
+				void this.dispose().then(() => process.exit(0));
 			},
 			hasQueuedMessages: () => this.queuedMessageCount > 0,
 			getContextUsage: () => this.getContextUsage(),
