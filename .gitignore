@@ -4,6 +4,7 @@ node_modules/
 
 # Build output
 dist/
+builds/
 packages/*/dist/
 packages/*/dist-chrome/
 packages/*/dist-firefox/
